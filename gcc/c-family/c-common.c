@@ -5207,7 +5207,12 @@ int
 check_user_alignment (const_tree align, bool allow_zero)
 {
   int i;
-
+  if (TREE_CODE (align) == INTEGER_CST) {
+    unsigned HOST_WIDE_INT value = tree_to_uhwi (align);
+    if (value == 0) {
+        warning_at (input_location, 0, "MISRA-C rule 8.16");
+    }
+}
   if (error_operand_p (align))
     return -1;
   if (TREE_CODE (align) != INTEGER_CST
