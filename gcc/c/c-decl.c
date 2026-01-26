@@ -109,6 +109,126 @@ void hash_search_func(char *key,int value,int level,location_t locus)
 	return ;
 }
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/* === MISRA-C Rule 22.13 (always-on, no option switch) ================== */
+
+static inline tree
+misra2213_peel_array_quals (tree t)
+{
+  if (!t) return t;
+  while (t && TREE_CODE (t) == ARRAY_TYPE)
+    t = TREE_TYPE (t);
+  if (t) t = TYPE_MAIN_VARIANT (t);
+  return t;
+}
+
+static inline const char *
+misra2213_typedef_name (tree t)
+{
+  if (!t) return NULL;
+  tree name = TYPE_NAME (t);
+  if (!name) return NULL;
+
+  if (TREE_CODE (name) == TYPE_DECL && DECL_NAME (name))
+    return IDENTIFIER_POINTER (DECL_NAME (name));
+  if (TREE_CODE (name) == IDENTIFIER_NODE)
+    return IDENTIFIER_POINTER (name);
+  return NULL;
+}
+
+
+static tree misra2213_can_mtx, misra2213_can_thrd, misra2213_can_cnd, misra2213_can_tss;
+
+static inline tree misra2213_strip_array_quals (tree t) {
+  while (t && TREE_CODE (t) == ARRAY_TYPE) t = TREE_TYPE (t);
+  return t ? TYPE_MAIN_VARIANT (t) : t;
+}
+
+/* 從當前符號表抓到 typedef 名稱的 TYPE，取其 TYPE_CANONICAL。 */
+static inline tree misra2213_lookup_canonical (const char *id) {
+  tree ident = get_identifier (id);
+  if (!ident) return NULL_TREE;
+  tree decl = lookup_name (ident);
+  if (!decl) return NULL_TREE;
+  /* decl 可能是 TYPE_DECL（typedef）。我們要它的 TYPE 本體。 */
+  tree ty = TREE_CODE (decl) == TYPE_DECL ? TREE_TYPE (decl) : NULL_TREE;
+  if (!ty) return NULL_TREE;
+  ty = TYPE_MAIN_VARIANT (ty);
+  return TYPE_CANONICAL (ty) ? TYPE_CANONICAL (ty) : ty;
+}
+
+/* 懶初始化：第一次用到時再查一次符號表，抓四種型別的 canonical。*/
+static inline void misra2213_lazy_init_canonicals (void) {
+  if (!misra2213_can_mtx)  misra2213_can_mtx  = misra2213_lookup_canonical ("mtx_t");
+  if (!misra2213_can_thrd) misra2213_can_thrd = misra2213_lookup_canonical ("thrd_t");
+  if (!misra2213_can_cnd)  misra2213_can_cnd  = misra2213_lookup_canonical ("cnd_t");
+  if (!misra2213_can_tss)  misra2213_can_tss  = misra2213_lookup_canonical ("tss_t");
+}
+
+/* 目標判斷：非指標本體，且其 canonical type 落在四種集合之一。*/
+static inline bool misra2213_is_forbidden_sync_obj (tree t) {
+  misra2213_lazy_init_canonicals();
+
+  t = misra2213_strip_array_quals (t);
+  if (!t || TREE_CODE (t) == POINTER_TYPE)
+    return false; /* 指標不是物件本體；只抓本體。 */
+
+  tree can = TYPE_CANONICAL (t) ? TYPE_CANONICAL (t) : t;
+
+  return ( (misra2213_can_mtx  && can == misra2213_can_mtx)
+        || (misra2213_can_thrd && can == misra2213_can_thrd)
+        || (misra2213_can_cnd  && can == misra2213_can_cnd)
+        || (misra2213_can_tss  && can == misra2213_can_tss) );
+}
+
+
+/* 對單一宣告做 22.13 檢查並直接輸出警告（warning_at(..., 0, ...)）。 */
+static void
+misra2213_check_decl (tree decl)
+{
+  if (!decl) return;
+
+  enum tree_code code = TREE_CODE (decl);
+  if (code != VAR_DECL && code != PARM_DECL)
+    return;
+
+  tree t = TREE_TYPE (decl);
+  if (!misra2213_is_forbidden_sync_obj (t))
+    return;
+
+  location_t loc = DECL_SOURCE_LOCATION (decl);
+
+  if (code == PARM_DECL)
+    {
+      /* 參數：自動儲存期 → 違規 */
+      warning_at (loc, 0,
+        "object of type %qT shall not have automatic storage duration "
+        "(parameter) (MISRA-C: Rule 22.13)", t);
+      return;
+    }
+
+  /* VAR_DECL：先判 TLS */
+  if (DECL_THREAD_LOCAL_P (decl))
+    {
+      warning_at (loc, 0,
+        "object of type %qT shall not have thread storage duration "
+        "(MISRA-C: Rule 22.13)", t);
+      return;
+    }
+
+  /* 自動儲存期：非 static、非 extern，且位於函式/區塊範圍 */
+  if (!TREE_STATIC (decl) && !DECL_EXTERNAL (decl))
+    {
+      tree ctx = DECL_CONTEXT (decl);
+      if (ctx && (TREE_CODE (ctx) == FUNCTION_DECL || TREE_CODE (ctx) == BLOCK))
+        {
+          warning_at (loc, 0,
+            "object of type %qT shall not have automatic storage duration "
+            "(MISRA-C: Rule 22.13)", t);
+        }
+    }
+}
+/* === MISRA-C Rule 22.13 (always-on, no option switch) END================== */
+
 /* In grokdeclarator, distinguish syntactic contexts of declarators.  */
 enum decl_context
 { NORMAL,			/* Ordinary declaration */
@@ -234,6 +354,58 @@ int current_omp_declare_target_attribute;
    true for a decl that's been bound a second time in an inner scope;
    in all such cases, the binding in the outer scope will have its
    invisible bit true.  */
+static bool
+misra18_10_is_ptr_to_vla (tree t)
+{
+  if (!t || TREE_CODE (t) != POINTER_TYPE)
+    return false;
+
+  tree to = TREE_TYPE (t);
+  if (!to || TREE_CODE (to) != ARRAY_TYPE)
+    return false;
+
+  /* 兩種寫法擇一即可（GCC 7.5 皆可） */
+  return variably_modified_type_p (to, NULL_TREE);
+  /* 或：
+     return C_TYPE_VARIABLE_SIZE (to);
+  */
+}
+
+static void
+misra18_10_check_decl (tree decl)
+{
+  if (!decl || decl == error_mark_node)
+    return;
+
+  /* 只在 C 前端檢（防守性），避免 C++ 等 */
+  if (c_dialect_cxx ())
+    return;
+
+  enum tree_code k = TREE_CODE (decl);
+  if (k != VAR_DECL && k != PARM_DECL && k != FIELD_DECL)
+    return;
+
+  tree ty = TREE_TYPE (decl);
+  if (misra18_10_is_ptr_to_vla (ty))
+    {
+      /* 第 2 個參數給 0 → 不綁定任何 -W 選項 */
+      warning_at (DECL_SOURCE_LOCATION (decl), 0,
+                  "MISRA-C Rule 18.10");
+    }
+}
+/* ===== MISRA 18.10 helpers ===== */
+static bool
+misra18_10_ptr_to_vla_p (tree t)
+{
+  if (!t || TREE_CODE (t) != POINTER_TYPE)
+    return false;
+  t = TREE_TYPE (t);
+  return t && TREE_CODE (t) == ARRAY_TYPE
+         && (variably_modified_type_p (t, NULL_TREE) /* GCC 7 有 */
+             /* || C_TYPE_VARIABLE_SIZE (t) 也可用 */);
+}
+/* ===== end helpers ===== */
+
 
 struct GTY((chain_next ("%h.prev"))) c_binding {
   union GTY(()) {		/* first so GTY desc can use decl */
@@ -11162,6 +11334,13 @@ declspecs_add_alignas (source_location loc,
   if (align == error_mark_node)
     return specs;
   align_log = check_user_alignment (align, true);
+    if (align_log == 2)
+  {
+    source_location effective_loc = (loc == 0 ? input_location : loc);
+    error_at (effective_loc,
+      "MISRA-C rule 8.17");
+  }
+  
   if (align_log > specs->align_log)
     specs->align_log = align_log;
   return specs;
