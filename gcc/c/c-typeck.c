@@ -50,6 +50,289 @@ along with GCC; see the file COPYING3.  If not see
 #include "gomp-constants.h"
 #include "spellcheck-tree.h"
 #include "gcc-rich-location.h"
+#include "builtins.h"
+#include "diagnostic-core.h"
+/* === MISRA 21.25 helpers (file-scope) =================================== */
+#include "input.h"   /* main_input_filename */
+#include <string.h>  /* strstr */
+
+/* 不要在編譯 GCC 自家 runtime（libgomp/libatomic）時套用 21.25 檢查 */
+static inline bool
+misra_skip_runtime_tu (void)
+{
+  const char *f = main_input_filename;
+  if (!f) return false;
+  return strstr (f, "/libgomp/") != NULL || strstr (f, "/libatomic/") != NULL;
+}
+
+/* 取報警定位（優先實參位置；若在 system header，折回展開點） */
+static inline location_t
+misra_spot_for_arg (location_t call_loc, vec<location_t> arg_loc, int idx)
+{
+  location_t spot = call_loc;
+  if (!arg_loc.is_empty ()
+      && idx >= 0 && idx < (int) arg_loc.length ()
+      && arg_loc[idx] != UNKNOWN_LOCATION)
+    spot = arg_loc[idx];
+  return expansion_point_location_if_in_system_header (spot);
+}
+/* ======================================================================= */
+
+
+/* ==== MISRA 21.22 helpers (local, minimal) ============================== */
+/* 抑制：在系統標頭、或 GCC 自家 runtime/library 原始碼中，不發 MISRA 診斷。 */
+static bool
+misra_suppress_for_internal (location_t loc)
+{
+  /* 若編譯器提供 in_system_header_at，就用它；沒有就略過這步。 */
+  /* 在某些配置下 in_system_header_at 可能是巨集或 inline，避免重宣告。 */
+  #ifdef in_system_header_at
+  if (in_system_header_at (loc))
+    return true;
+  #endif
+
+  /* 依路徑字串辨識 GCC 自家庫或 runtime。 */
+  const char *file = LOCATION_FILE (loc);
+  if (!file) return false;
+
+  /* 加入實際 build 路徑片段，避免誤報 */
+  static const char *const bads[] = {
+    "/build-test-gcc/x86_64-pc-linux-gnu/libgomp/",
+    "/build-test-gcc/x86_64-pc-linux-gnu/libatomic/",
+    "/libgomp/", "/libatomic/", "/libgcc/", "/libiberty/",
+    "/libstdc++", "/gcc/asan/", "/gcc/tsan/", "/gcc/ubsan/",
+    "/gcc-7.5.0/libgomp/", "/gcc-7.5.0/libatomic/", "/gcc/"
+  };
+  for (unsigned i = 0; i < sizeof(bads)/sizeof(bads[0]); ++i)
+    if (strstr (file, bads[i]) != NULL)
+      return true;
+
+  return false;
+}
+
+/* Rule 21.22：不接受複數參數的 type-generic 名稱清單（含 f/l 變體）。 */
+static bool
+misra_2122_name_disallows_complex (const char *name)
+{
+  static const char *const base[] = {
+    "atan2","cbrt","ceil","copysign","erf","erfc","exp2","expm1",
+    "fdim","floor","fma","fmax","fmin","fmod","frexp","hypot","ilogb",
+    "ldexp","lgamma","llrint","llround","log10","log1p","log2","logb",
+    "lrint","lround","nearbyint","nextafter","nexttoward","remainder",
+    "remquo","rint","round","scalbn","scalbln","tgamma","trunc"
+  };
+  for (unsigned i = 0; i < sizeof(base)/sizeof(base[0]); ++i) {
+    const char *b = base[i];
+    size_t blen = strlen (b);
+    if (strncmp (name, b, blen) == 0) {
+      const char *tail = name + blen;
+      if (*tail == '\0'
+          || (tail[0] == 'f' && tail[1] == '\0')
+          || (tail[0] == 'l' && tail[1] == '\0'))
+        return true;
+    }
+  }
+  return false;
+}
+
+/* frexp / remquo（含 f/l 變體）最後一參數是輸出，不算運算元，要忽略。 */
+static bool
+misra_2122_ignore_last_arg (const char *name)
+{
+  return (strncmp (name, "frexp", 5) == 0) || (strncmp (name, "remquo", 6) == 0);
+}
+/* ======================================================================= */
+
+
+static bool any_chained_designator_seen = false; // For MISRA-C 9.6
+static bool any_positional_initializer_seen = false; // For MISRA-C 9.6
+
+/* === MISRA 21.23 helpers (always-on, no option) ======================== */
+static bool
+misra_is_tgmath_multiarg_name (const char *name)
+{
+  static const char * const list[] = {
+    "atan2", "copysign", "fdim", "fma", "fmax", "fmin", "fmod",
+    "frexp", "hypot", "ldexp", "nextafter", "nexttoward", "pow",
+    "remainder", "remquo", "scalbn", "scalbln"
+  };
+  for (unsigned i = 0; i < sizeof(list)/sizeof(list[0]); ++i)
+    if (strcmp (name, list[i]) == 0)
+      return true;
+  return false;
+}
+
+static tree
+misra_strip_noop_conversions (tree t)
+{
+  for (;;)
+    {
+      if (!t) return t;
+
+      /* 純包裝：直接剝掉 */
+      if (TREE_CODE (t) == NON_LVALUE_EXPR)
+        { t = TREE_OPERAND (t, 0); continue; }
+
+      if (CONVERT_EXPR_P (t) || TREE_CODE (t) == NOP_EXPR)
+        {
+          tree inner = TREE_OPERAND (t, 0);
+          if (!inner) return t;
+
+          tree to   = TYPE_MAIN_VARIANT (TREE_TYPE (t));
+          tree from = TYPE_MAIN_VARIANT (TREE_TYPE (inner));
+          location_t cloc = EXPR_LOCATION (t);
+
+          /* 剝除條件：
+             1) 無語義轉型（主變體相同）；或
+             2) 看起來是隱式轉型（沒有來源位置）。 */
+          if (to == from || cloc == UNKNOWN_LOCATION)
+            { t = inner; continue; }
+
+          /* 顯式且改型的 cast（如 (float)d2）：保留 */
+          return t;
+        }
+
+      /* 其他節點就停 */
+      return t;
+    }
+}
+
+
+
+
+static tree
+misra_promoted_main_type (tree t)
+{
+  if (!t) return NULL_TREE;
+  t = TYPE_MAIN_VARIANT (t);
+  if (INTEGRAL_TYPE_P (t))
+    {
+      tree pt = c_type_promotes_to (t);
+      if (pt) t = TYPE_MAIN_VARIANT (pt);
+    }
+  return t;
+}
+/* ====================================================================== */
+/* —— MISRA-C Rule 21.26 support —— */
+
+/* 注意：要讓 GC 掃描，struct 需要 GTY 標註；enum 直接用 int 儲存即可 */
+struct GTY(()) misra_mtx_rec {
+  tree var;          /* 該 mutex 的 top-level 變數（VAR_DECL） */
+  int  has_timed;    /* misra_timed_t：0=UNKNOWN, 1=NO, 2=YES */
+};
+
+typedef enum { MISRA_TIMED_UNKNOWN = 0, MISRA_TIMED_NO = 1, MISRA_TIMED_YES = 2 } misra_timed_t;
+
+/* 目前所在函式；用來在切換函式時清空快取 */
+static GTY(()) tree misra_mtx_map_func = NULL_TREE;
+
+/* 關鍵：vec 必須是「指標」！且用 va_gc 配 GC 管理。 */
+static GTY(()) vec<misra_mtx_rec, va_gc> *misra_mtx_inits = NULL;
+static void
+misra_mtx_clear_if_new_func (void)
+{
+  if (current_function_decl != misra_mtx_map_func)
+    {
+      /* 指標版本的 vec：直接傳指標給 vec_safe_truncate */
+      vec_safe_truncate (misra_mtx_inits, 0);
+      misra_mtx_map_func = current_function_decl;
+    }
+}
+static tree
+misra_extract_var_from_mutex_arg (tree a0)
+{
+  if (!a0) return NULL_TREE;
+
+  if (TREE_CODE (a0) == ADDR_EXPR)
+    a0 = TREE_OPERAND (a0, 0);
+
+  while (a0 && TREE_CODE (a0) == COMPONENT_REF)
+    a0 = TREE_OPERAND (a0, 0);
+
+  if (a0 && TREE_CODE (a0) == VAR_DECL)
+    return a0;
+
+  return NULL_TREE;
+}
+static bool
+misra_expr_contains_mtx_timed (tree t)
+{
+  if (!t) return false;
+  switch (TREE_CODE (t))
+    {
+    case CONST_DECL:
+      if (DECL_NAME (t))
+        {
+          const char *nm = IDENTIFIER_POINTER (DECL_NAME (t));
+          if (nm && strcmp (nm, "mtx_timed") == 0)
+            return true;
+        }
+      return false;
+    case ADDR_EXPR: case NOP_EXPR: case CONVERT_EXPR: case VIEW_CONVERT_EXPR:
+    case INDIRECT_REF: case COMPONENT_REF: case ARRAY_REF: case ARRAY_RANGE_REF:
+      return misra_expr_contains_mtx_timed (TREE_OPERAND (t, 0));
+    case BIT_IOR_EXPR: case BIT_AND_EXPR: case BIT_XOR_EXPR:
+    case PLUS_EXPR: case MINUS_EXPR: case MULT_EXPR:
+      return misra_expr_contains_mtx_timed (TREE_OPERAND (t, 0))
+          || misra_expr_contains_mtx_timed (TREE_OPERAND (t, 1));
+    default:
+      return false;
+    }
+}
+
+static misra_timed_t
+misra_eval_has_mtx_timed (tree flags_expr)
+{
+  if (!flags_expr) return MISRA_TIMED_UNKNOWN;
+
+  if (misra_expr_contains_mtx_timed (flags_expr))
+    return MISRA_TIMED_YES;
+
+  if (TREE_CODE (flags_expr) == CONST_DECL && DECL_NAME (flags_expr))
+    {
+      const char *nm = IDENTIFIER_POINTER (DECL_NAME (flags_expr));
+      if (nm && strcmp (nm, "mtx_plain") == 0)
+        return MISRA_TIMED_NO;
+    }
+
+  /* 若是 INTEGER_CST（已摺疊整數），不去硬解 enum 值，保守 UNKNOWN */
+  return MISRA_TIMED_UNKNOWN;
+}
+static void
+misra_record_mtx_init (tree var, misra_timed_t timed)
+{
+  if (!var) return;
+
+  unsigned len = vec_safe_length (misra_mtx_inits);
+  for (unsigned i = 0; i < len; ++i)
+    {
+      if ((*misra_mtx_inits)[i].var == var)   /* 指標 vec 的索引寫法 */
+        {
+          (*misra_mtx_inits)[i].has_timed = timed;
+          return;
+        }
+    }
+
+  misra_mtx_rec rec;
+  rec.var = var;
+  rec.has_timed = timed;
+  vec_safe_push (misra_mtx_inits, rec);       /* 直接把指標傳進來 */
+}
+
+static bool
+misra_lookup_mtx_timed (tree var, misra_timed_t *out)
+{
+  if (!var) return false;
+  unsigned len = vec_safe_length (misra_mtx_inits);
+  for (unsigned i = 0; i < len; ++i)
+    {
+      if ((*misra_mtx_inits)[i].var == var)
+        { *out = (misra_timed_t)(*misra_mtx_inits)[i].has_timed; return true; }
+    }
+  return false;
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "print-tree.h"
 #include "tree.h"
@@ -10068,6 +10351,23 @@ void
 process_init_element (location_t loc, struct c_expr value, bool implicit,
 		      struct obstack * braced_init_obstack)
 {
+    /* 偵測 chained designator */
+  if (designator_depth > 1)
+    any_chained_designator_seen = true;
+
+  /* 偵測位置初始化 */
+  if (designator_depth == 0)
+    any_positional_initializer_seen = true;
+
+  /* 如果混用就報錯 */
+  if (any_chained_designator_seen && any_positional_initializer_seen)
+  {
+    warning_at (loc, 0,
+      "MISRA-C rule 9.6");
+    // 防止重複報告
+    any_chained_designator_seen = false;
+    any_positional_initializer_seen = false;
+  }
   tree orig_value = value.value;
   int string_flag = orig_value != 0 && TREE_CODE (orig_value) == STRING_CST;
   bool strict_string = value.original_code == STRING_CST;

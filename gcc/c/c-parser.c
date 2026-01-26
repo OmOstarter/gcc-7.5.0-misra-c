@@ -65,8 +65,13 @@ along with GCC; see the file COPYING3.  If not see
 #include "read-rtl-function.h"
 #include "run-rtl-passes.h"
 #include "intl.h"
+#include "input.h" 
 #include "print-tree.h"//
 #include "tree.h"
+extern void debug_tree (tree);  /* 手動宣告 debug_tree，給這個檔案用 */
+
+#include "tree-pretty-print.h"
+
 /////////////////////////////////////////////////////////////////////////////////////////////
 extern bool trigger_9_3;
 extern bool trigger_9_5;
@@ -95,6 +100,154 @@ location_t loc_9_4;
    and report error if any of the decls are still incomplete.  */ 
 
 vec<tree> incomplete_record_decls;
+/* —— MISRA helper (23.2): 檢查一個 expression tree 是否「看起來」會有副作用 —— */
+static bool
+misra_expr_has_potential_side_effects (tree t)
+{
+  if (!t) return false;
+
+  switch (TREE_CODE (t))
+    {
+      /* 明確具副作用 */
+    case MODIFY_EXPR:         /* x = y */
+    case INIT_EXPR:
+    case PREINCREMENT_EXPR:   /* ++x */
+    case PREDECREMENT_EXPR:   /* --x */
+    case POSTINCREMENT_EXPR:  /* x++ */
+    case POSTDECREMENT_EXPR:  /* x-- */
+    case CALL_EXPR:           /* 函式呼叫 — 本規則視為副作用 */
+    case ASM_EXPR:
+      return true;
+
+      /* 逗號運算子任一邊可能有副作用 */
+    case COMPOUND_EXPR:
+      return (misra_expr_has_potential_side_effects (TREE_OPERAND (t, 0)) ||
+              misra_expr_has_potential_side_effects (TREE_OPERAND (t, 1)));
+
+    default:
+      {
+        /* 遞迴檢查所有運算元 */
+        int n = TREE_OPERAND_LENGTH (t);
+        for (int i = 0; i < n; ++i)
+          if (misra_expr_has_potential_side_effects (TREE_OPERAND (t, i)))
+            return true;
+
+        /* 保險：CALL 的每個引數也走訪一次（雖上面已涵蓋） */
+        if (TREE_CODE (t) == CALL_EXPR)
+          {
+            int nargs = call_expr_nargs (t);
+            for (int i = 0; i < nargs; ++i)
+              if (misra_expr_has_potential_side_effects (CALL_EXPR_ARG (t, i)))
+                return true;
+          }
+      }
+      break;
+    }
+  return false;
+}
+/* === MISRA-C Rule 23.4 helpers === */
+static bool
+misra234_is_unnamed_record_or_union (tree t)
+{
+  enum tree_code code = TREE_CODE (t);
+  if (code != RECORD_TYPE && code != UNION_TYPE)
+    return false;
+
+  tree tn = TYPE_NAME (t);
+  if (!tn)
+    return true;
+
+  if (TREE_CODE (tn) == TYPE_DECL && DECL_NAME (tn) == NULL_TREE)
+    return true;
+
+  return false;
+}
+
+static bool
+misra234_has_top_level_cv_or_atomic (tree t)
+{
+  /* FUNCTION_TYPE 不算「物件型別」，但即使帶限定也會在 FUNCTION_TYPE 分支被攔掉。 */
+  if (TREE_CODE (t) == FUNCTION_TYPE)
+    return false;
+
+  int quals = TYPE_QUALS (t);
+  return (quals & (TYPE_QUAL_CONST | TYPE_QUAL_VOLATILE | TYPE_QUAL_ATOMIC)) != 0;
+}
+
+static const char *
+misra234_reason (tree t)
+{
+  /* 回傳最關鍵的一個理由字串（用於訊息拼接）。 */
+  if (TREE_CODE (t) == ARRAY_TYPE)            return "array type";
+  if (TREE_CODE (t) == FUNCTION_TYPE)         return "function type";
+  if (misra234_is_unnamed_record_or_union(t)) return "unnamed struct/union type";
+  if (misra234_has_top_level_cv_or_atomic(t)) {
+    int q = TYPE_QUALS (t);
+    if (q & TYPE_QUAL_ATOMIC)   return "atomic-qualified object type";
+    if (q & TYPE_QUAL_CONST)    return "const-qualified object type";
+    if (q & TYPE_QUAL_VOLATILE) return "volatile-qualified object type";
+    return "qualified object type";
+  }
+  return NULL;
+}
+
+static bool
+misra234_is_forbidden_assoc_type (tree t)
+{
+  if (!t) return false;                /* default: OK */
+  if (TREE_CODE (t) == ARRAY_TYPE) return true;
+  if (TREE_CODE (t) == FUNCTION_TYPE) return true;
+  if (misra234_is_unnamed_record_or_union (t)) return true;
+  if (misra234_has_top_level_cv_or_atomic (t)) return true;
+  return false;
+}
+/* === end helpers === */
+
+/* MISRA-C Rule 23.5: 檢查 from 指標是否可以在 C 的一般語境中
+   隱式轉換成 to 指標（例如函式參數傳遞）。我們只處理兩類：
+   1) T * -> cv T *
+   2) 任意物件指標 -> cv void *   */
+static bool
+misra_pointer_implicitly_convertible_p (tree from, tree to)
+{
+  if (!from || !to)
+    return false;
+
+  if (TREE_CODE (from) != POINTER_TYPE
+      || TREE_CODE (to) != POINTER_TYPE)
+    return false;
+
+  tree from_target = TREE_TYPE (from);
+  tree to_target   = TREE_TYPE (to);
+
+  /* 只處理「指向物件型別」的指標，不處理函式指標。  */
+  if (TREE_CODE (from_target) == FUNCTION_TYPE
+      || TREE_CODE (to_target) == FUNCTION_TYPE)
+    return false;
+
+  /* ---- case 1：任意物件指標 -> cv void * ----  */
+  if (TREE_CODE (to_target) == VOID_TYPE
+      && TREE_CODE (from_target) != VOID_TYPE)
+    {
+      /* C11 6.3.2.3: 任意物件指標都可以隱式轉成 void *（含 cv） */
+      return true;
+    }
+
+  /* ---- case 2：T * -> cv T *（資格修飾變多） ----  */
+  if (TYPE_MAIN_VARIANT (from_target) == TYPE_MAIN_VARIANT (to_target))
+    {
+      int from_quals = TYPE_QUALS (from_target);
+      int to_quals   = TYPE_QUALS (to_target);
+
+      /* from 的資格修飾要是 to 的子集合（只能加 const/volatile，不能減） */
+      if ((from_quals & ~to_quals) == 0
+          && from_quals != to_quals)
+        return true;
+    }
+
+  return false;
+}
+
 
 void
 set_c_expr_source_range (c_expr *expr,
