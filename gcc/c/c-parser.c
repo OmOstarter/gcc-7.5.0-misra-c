@@ -8231,6 +8231,16 @@ c_parser_generic_selection (c_parser *parser)
 
   gcc_assert (c_parser_next_token_is_keyword (parser, RID_GENERIC));
   generic_loc = c_parser_peek_token (parser)->location;
+
+  /* MISRA-C Rule 23.1：_Generic 必須來自函式形式巨集的展開 */
+  if (!in_system_header_at (generic_loc))
+    {
+      /* GCC 7 可用：from_macro_expansion_at(loc) */
+      if (!from_macro_expansion_at (generic_loc))
+        warning_at (generic_loc, 0,
+                    "MISRA-C: Rule 23.1: %<_Generic%> should be expanded from a function-like macro");
+    }
+
   c_parser_consume_token (parser);
   if (flag_isoc99)
     pedwarn_c99 (generic_loc, OPT_Wpedantic,
