@@ -3613,6 +3613,403 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
   fntype = TREE_TYPE (fntype);
   /* Convert the parameters to the types declared in the
      function prototype, or apply default promotions.  */
+ /* —— MISRA-C Rule 21.22：在參數被轉換之前檢查 —— */
+  {
+    /* 解析被呼叫目標（直接或 &f 取址）。 */
+    tree callee = NULL_TREE;
+    if (function && TREE_CODE (function) == FUNCTION_DECL)
+      callee = function;
+    else if (function
+             && TREE_CODE (function) == ADDR_EXPR
+             && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+      callee = TREE_OPERAND (function, 0);
+
+    if (callee && DECL_NAME (callee)) {
+      const char *fname = IDENTIFIER_POINTER (DECL_NAME (callee));
+      if (fname && misra_2122_name_disallows_complex (fname) && params) {
+        int argc = params->length ();
+        int upto = argc;
+        if (argc > 0 && misra_2122_ignore_last_arg (fname))
+          upto = argc - 1; /* frexp/remquo：最後一參數為 out，忽略 */
+
+        for (int i = 0; i < upto; ++i) {
+          tree arg = (*params)[i];
+          tree t = arg ? TREE_TYPE (arg) : NULL_TREE;
+          if (t && TREE_CODE (t) == COMPLEX_TYPE) {
+            /* 選擇最精準的位置：arg_loc[i] > EXPR_LOCATION(arg) > 呼叫點 loc */
+            location_t spot = loc;
+
+            if (!arg_loc.is_empty ()
+                && i < (int) arg_loc.length ()
+                && arg_loc[i] != UNKNOWN_LOCATION)
+              spot = arg_loc[i];
+            else {
+              location_t eloc = EXPR_LOCATION (arg);
+              if (eloc != UNKNOWN_LOCATION)
+                spot = eloc;
+            }
+
+            if (!misra_suppress_for_internal (spot)) {
+              warning_at (spot, 0,
+                "MISRA-C: Rule 21.22",
+                i + 1, fname);
+            }
+            break; /* 報一次即可，避免噪音 */
+          }
+        }
+      }
+    }
+  }
+  
+  /* —— MISRA-C Rule 21.23：<tgmath.h> 多參數型別泛型巨集之運算元型別需一致 —— */
+  {
+    /* 解析被呼叫目標（直接或 &f 取址）。 */
+    tree callee = NULL_TREE;
+    if (function && TREE_CODE (function) == FUNCTION_DECL)
+      callee = function;
+    else if (function
+             && TREE_CODE (function) == ADDR_EXPR
+             && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+      callee = TREE_OPERAND (function, 0);
+
+    if (callee && DECL_NAME (callee) && params)
+      {
+        const char *fname = IDENTIFIER_POINTER (DECL_NAME (callee));
+        if (fname && misra_is_tgmath_multiarg_name (fname))
+          {
+            int argc = (int) params->length ();
+            if (argc >= 2)
+              {
+                /* frexp / remquo 的最後一參數為輸出參數，不納入「運算元」 */
+                bool exclude_last = (strcmp (fname, "frexp") == 0
+                                     || strcmp (fname, "remquo") == 0);
+                int op_count = exclude_last ? argc - 1 : argc;
+
+                if (op_count >= 2)
+                  {
+                    /* 第 0 個運算元：剝掉隱式/無語義轉型，保留顯式改型 */
+                    tree a0 = (*params)[0];
+                    a0 = misra_strip_noop_conversions (a0);
+                    tree t0 = misra_promoted_main_type (TREE_TYPE (a0));
+
+                    for (int i = 1; i < op_count; ++i)
+                      {
+                        tree ai = (*params)[i];
+                        ai = misra_strip_noop_conversions (ai);
+                        tree ti = misra_promoted_main_type (TREE_TYPE (ai));
+
+                        if (t0 && ti && TYPE_MAIN_VARIANT (t0) != TYPE_MAIN_VARIANT (ti))
+                          {
+                            /* 選擇最精準的位置：arg_loc[i] > EXPR_LOCATION(ai) > 呼叫點 loc */
+                            location_t spot = loc;
+                            if (!arg_loc.is_empty ()
+                                && i < (int) arg_loc.length ()
+                                && arg_loc[i] != UNKNOWN_LOCATION)
+                              spot = arg_loc[i];
+                            else {
+                              location_t eloc = EXPR_LOCATION (ai);
+                              if (eloc != UNKNOWN_LOCATION)
+                                spot = eloc;
+                            }
+
+                            warning_at (spot, 0,
+                              "MISRA-C: Rule 21.23");
+                            break; /* 報一次即可，避免噪音 */
+                          }
+                      }
+                  }
+              }
+          }
+      }
+  }
+/* —— MISRA-C Rule 21.25：所有記憶體同步操作必須使用 memory_order_seq_cst —— */
+{
+  /* 找出被呼叫的目標（直接或 &f）。 */
+  tree callee = fundecl;
+  if (!callee)
+    {
+      if (function && TREE_CODE (function) == FUNCTION_DECL)
+        callee = function;
+      else if (function
+               && TREE_CODE (function) == ADDR_EXPR
+               && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+        callee = TREE_OPERAND (function, 0);
+    }
+
+  if (callee && TREE_CODE (callee) == FUNCTION_DECL)
+    {
+      enum built_in_function bcode =
+        DECL_BUILT_IN (callee) ? DECL_FUNCTION_CODE (callee) : (enum built_in_function) -1;
+
+      /* 僅在「使用者原始碼」的呼叫點檢查，避免干擾系統標頭/內部庫。 */
+      location_t call_spot = expansion_point_location_if_in_system_header (loc);
+      bool call_from_user = (call_spot != UNKNOWN_LOCATION) && !in_system_header_at (call_spot);
+
+      if (call_from_user)
+        {
+          int argc = params ? (int) params->length () : 0;
+
+          /* 取參數與 fold 後的值 */
+          auto get_arg = [&] (int idx) -> tree {
+            return (idx >= 0 && idx < argc) ? (*params)[idx] : NULL_TREE;
+          };
+          auto folded_val = [&] (int idx) -> tree {
+            tree t = get_arg (idx);
+            return t ? fold (t) : NULL_TREE;
+          };
+
+          /* 比對 INTEGER_CST 值 */
+          const HOST_WIDE_INT MO_SEQ = MEMMODEL_SEQ_CST;
+          const HOST_WIDE_INT MO_REL = MEMMODEL_RELAXED;
+
+          auto int_cst_eq = [&] (int idx, HOST_WIDE_INT v) -> bool {
+            tree t = folded_val (idx);
+            return (t && TREE_CODE (t) == INTEGER_CST
+                    && (unsigned HOST_WIDE_INT) TREE_INT_CST_LOW (t)
+                       == (unsigned HOST_WIDE_INT) v);
+          };
+
+          auto is_seq_cst = [&] (int idx) -> bool { return int_cst_eq (idx, MO_SEQ); };
+          auto is_relaxed = [&] (int idx) -> bool { return int_cst_eq (idx, MO_REL); };
+
+          /* caret：參數若在系統標頭，折回到使用者展開點 */
+          auto spot_for_arg = [&] (int idx) -> location_t {
+            location_t spot = loc;
+            if (!arg_loc.is_empty ()
+                && idx >= 0 && idx < (int) arg_loc.length ()
+                && arg_loc[idx] != UNKNOWN_LOCATION)
+              spot = arg_loc[idx];
+            return expansion_point_location_if_in_system_header (spot);
+          };
+
+          auto warn_bad_mo = [&] (int idx) {
+            location_t s = spot_for_arg (idx);
+            if (!misra_suppress_for_internal (s))
+              warning_at (s, 0,
+                "MISRA-C: Rule 21.25 violation: memory order must be 'memory_order_seq_cst'");
+          };
+
+          bool handled = false;
+
+          if (DECL_BUILT_IN (callee))
+            {
+              switch (bcode)
+                {
+                  /* fence：唯一參數在索引 0 */
+                  case BUILT_IN_ATOMIC_THREAD_FENCE:
+                  case BUILT_IN_ATOMIC_SIGNAL_FENCE:
+                    handled = true;
+                    if (!is_seq_cst (0)) warn_bad_mo (0);
+                    break;
+
+                  /* —— 單一 memorder 在最後一個參數的系列 —— */
+                  case BUILT_IN_ATOMIC_LOAD:
+                  case BUILT_IN_ATOMIC_LOAD_N:
+                  case BUILT_IN_ATOMIC_STORE:
+                  case BUILT_IN_ATOMIC_STORE_N:
+                  case BUILT_IN_ATOMIC_EXCHANGE:
+                  case BUILT_IN_ATOMIC_EXCHANGE_N:
+                  case BUILT_IN_ATOMIC_FETCH_ADD_N:
+                  case BUILT_IN_ATOMIC_FETCH_SUB_N:
+                  case BUILT_IN_ATOMIC_FETCH_AND_N:
+                  case BUILT_IN_ATOMIC_FETCH_OR_N:
+                  case BUILT_IN_ATOMIC_FETCH_XOR_N:
+                  case BUILT_IN_ATOMIC_FETCH_NAND_N:   /* 某些目標才有，若未定義可刪 */
+                  case BUILT_IN_ATOMIC_TEST_AND_SET:
+                  case BUILT_IN_ATOMIC_CLEAR:
+                  /* —— 寬度特化（若你的 GCC 未定義某些 _16 等，刪掉對應行即可） —— */
+                  case BUILT_IN_ATOMIC_LOAD_1:
+                  case BUILT_IN_ATOMIC_LOAD_2:
+                  case BUILT_IN_ATOMIC_LOAD_4:
+                  case BUILT_IN_ATOMIC_LOAD_8:
+                  case BUILT_IN_ATOMIC_LOAD_16:
+                  case BUILT_IN_ATOMIC_STORE_1:
+                  case BUILT_IN_ATOMIC_STORE_2:
+                  case BUILT_IN_ATOMIC_STORE_4:
+                  case BUILT_IN_ATOMIC_STORE_8:
+                  case BUILT_IN_ATOMIC_STORE_16:
+                  case BUILT_IN_ATOMIC_EXCHANGE_1:
+                  case BUILT_IN_ATOMIC_EXCHANGE_2:
+                  case BUILT_IN_ATOMIC_EXCHANGE_4:
+                  case BUILT_IN_ATOMIC_EXCHANGE_8:
+                  case BUILT_IN_ATOMIC_EXCHANGE_16:
+                  case BUILT_IN_ATOMIC_FETCH_ADD_1:
+                  case BUILT_IN_ATOMIC_FETCH_ADD_2:
+                  case BUILT_IN_ATOMIC_FETCH_ADD_4:
+                  case BUILT_IN_ATOMIC_FETCH_ADD_8:
+                  case BUILT_IN_ATOMIC_FETCH_ADD_16:
+                  case BUILT_IN_ATOMIC_FETCH_SUB_1:
+                  case BUILT_IN_ATOMIC_FETCH_SUB_2:
+                  case BUILT_IN_ATOMIC_FETCH_SUB_4:
+                  case BUILT_IN_ATOMIC_FETCH_SUB_8:
+                  case BUILT_IN_ATOMIC_FETCH_SUB_16:
+                  case BUILT_IN_ATOMIC_FETCH_AND_1:
+                  case BUILT_IN_ATOMIC_FETCH_AND_2:
+                  case BUILT_IN_ATOMIC_FETCH_AND_4:
+                  case BUILT_IN_ATOMIC_FETCH_AND_8:
+                  case BUILT_IN_ATOMIC_FETCH_AND_16:
+                  case BUILT_IN_ATOMIC_FETCH_OR_1:
+                  case BUILT_IN_ATOMIC_FETCH_OR_2:
+                  case BUILT_IN_ATOMIC_FETCH_OR_4:
+                  case BUILT_IN_ATOMIC_FETCH_OR_8:
+                  case BUILT_IN_ATOMIC_FETCH_OR_16:
+                  case BUILT_IN_ATOMIC_FETCH_XOR_1:
+                  case BUILT_IN_ATOMIC_FETCH_XOR_2:
+                  case BUILT_IN_ATOMIC_FETCH_XOR_4:
+                  case BUILT_IN_ATOMIC_FETCH_XOR_8:
+                  case BUILT_IN_ATOMIC_FETCH_XOR_16:
+                  /* NAND 的特化若有定義就留著，否則刪掉 */
+                  case BUILT_IN_ATOMIC_FETCH_NAND_1:
+                  case BUILT_IN_ATOMIC_FETCH_NAND_2:
+                  case BUILT_IN_ATOMIC_FETCH_NAND_4:
+                  case BUILT_IN_ATOMIC_FETCH_NAND_8:
+                  case BUILT_IN_ATOMIC_FETCH_NAND_16:
+                    {
+                      handled = true;
+                      int mo_idx = argc - 1;
+
+                      /* —— 精準放過 atomic_init 的展開（store + RELAXED + 來源未知/巨集合成） —— */
+                      bool is_store_like =
+                        (bcode == BUILT_IN_ATOMIC_STORE
+                         || bcode == BUILT_IN_ATOMIC_STORE_N
+                         || bcode == BUILT_IN_ATOMIC_STORE_1
+                         || bcode == BUILT_IN_ATOMIC_STORE_2
+                         || bcode == BUILT_IN_ATOMIC_STORE_4
+                         || bcode == BUILT_IN_ATOMIC_STORE_8
+                         || bcode == BUILT_IN_ATOMIC_STORE_16);
+
+                      bool mo_unknown = true;
+                      tree mo_node = get_arg (mo_idx);
+                      if (mo_node)
+                        {
+                          location_t el = EXPR_LOCATION (mo_node);
+                          if (el != UNKNOWN_LOCATION)
+                            mo_unknown = false;
+                        }
+
+                      if (is_store_like && is_relaxed (mo_idx) && mo_unknown)
+                        break;  /* 放過 atomic_init */
+
+                      /* 其他情況必須是 seq_cst */
+                      if (!is_seq_cst (mo_idx))
+                        warn_bad_mo (mo_idx);
+                    }
+                    break;
+
+                  /* compare_exchange：尾端兩個 memorder（success, failure） */
+                  case BUILT_IN_ATOMIC_COMPARE_EXCHANGE:
+                  case BUILT_IN_ATOMIC_COMPARE_EXCHANGE_N:
+                    handled = true;
+                    if (argc >= 6)
+                      {
+                        if (!is_seq_cst (argc - 2)) warn_bad_mo (argc - 2);
+                        if (!is_seq_cst (argc - 1)) warn_bad_mo (argc - 1);
+                      }
+                    else
+                      {
+                        /* 參數異常：至少指最後一個參數給出提示 */
+                        warn_bad_mo (argc - 1);
+                      }
+                    break;
+
+                  default:
+                    break;
+                }
+            }
+
+          /* 名稱 fallback（有些情況 DECL_BUILT_IN 不成立，仍是 __atomic_* 名稱） */
+          if (!handled && DECL_NAME (callee))
+            {
+              const char *cname = IDENTIFIER_POINTER (DECL_NAME (callee));
+              if (cname && !strncmp (cname, "__atomic_", 9))
+                {
+                  if (!strcmp (cname, "__atomic_thread_fence")
+                      || !strcmp (cname, "__atomic_signal_fence"))
+                    {
+                      if (!is_seq_cst (0))
+                        warn_bad_mo (0);
+                    }
+                  else
+                    {
+                      int mo_idx = argc - 1;
+
+                      /* 名稱層面的 store-like：__atomic_store / __atomic_store_n / __atomic_store_# */
+                      bool name_store_like =
+                        (!strcmp (cname, "__atomic_store")
+                         || !strcmp (cname, "__atomic_store_n")
+                         || !strncmp (cname, "__atomic_store_", 15)); /* e.g. __atomic_store_4 */
+
+                      bool mo_unknown = true;
+                      tree mo_node = get_arg (mo_idx);
+                      if (mo_node)
+                        {
+                          location_t el = EXPR_LOCATION (mo_node);
+                          if (el != UNKNOWN_LOCATION)
+                            mo_unknown = false;
+                        }
+
+                      /* 同樣放過 atomic_init 的展開；其餘要求 seq_cst */
+                      if (!(name_store_like && is_relaxed (mo_idx) && mo_unknown))
+                        {
+                          if (!is_seq_cst (mo_idx))
+                            warn_bad_mo (mo_idx);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+  /* —— MISRA-C Rule 21.26：mtx_timedlock 只能用在含 mtx_timed 的 mutex —— */
+{
+  misra_mtx_clear_if_new_func ();
+
+  tree callee = NULL_TREE;
+  if (function && TREE_CODE (function) == FUNCTION_DECL)
+    callee = function;
+  else if (function
+           && TREE_CODE (function) == ADDR_EXPR
+           && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+    callee = TREE_OPERAND (function, 0);
+
+  if (callee && DECL_NAME (callee) && params)
+    {
+      const char *fname = IDENTIFIER_POINTER (DECL_NAME (callee));
+
+      /* A) 記錄 mtx_init(&X, flags) */
+      if (fname && strcmp (fname, "mtx_init") == 0 && params->length () >= 2)
+        {
+          tree a0 = (*params)[0];
+          tree a1 = (*params)[1];
+          tree var = misra_extract_var_from_mutex_arg (a0);
+          misra_timed_t timed = misra_eval_has_mtx_timed (a1);
+          misra_record_mtx_init (var, timed);
+        }
+
+      /* B) 檢查 mtx_timedlock(&X, ts) */
+      if (fname && strcmp (fname, "mtx_timedlock") == 0 && params->length () >= 1)
+        {
+          tree a0 = (*params)[0];
+          tree var = misra_extract_var_from_mutex_arg (a0);
+          misra_timed_t timed;
+          if (misra_lookup_mtx_timed (var, &timed))
+            {
+              if (timed == MISRA_TIMED_NO)
+                {
+                  location_t wloc = loc; /* 或 EXPR_LOCATION(a0) */
+                  warning_at (wloc, 0,
+                    "MISRA-C: Rule 21.26: 'mtx_timedlock' applied to a mutex not "
+                    "initialized with 'mtx_timed' (or 'mtx_timed | mtx_recursive').");
+                }
+            }
+          /* 查無初始化紀錄：保守不報（避免誤報） */
+        }
+    }
+}
+
+
   nargs = convert_arguments (loc, arg_loc, TYPE_ARG_TYPES (fntype), params,
 			     origtypes, function, fundecl);
 
