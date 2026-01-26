@@ -8516,11 +8516,46 @@ c_parser_postfix_expression (c_parser *parser)
     {
     case C_ID_ID:
       {
-        tree id = c_parser_peek_token (parser)->value;
+    /* 0. 目前識別字 token 與位置 */
+    c_token *name_tok = c_parser_peek_token (parser);
+    tree id  = name_tok->value;
+    location_t loc = name_tok->location;
+
+    /* 1. 下一顆 token 是否為 '(' → 判斷是否是函式呼叫 */
+    bool is_call_ctx =
+      (c_parser_peek_2nd_token (parser)->type == CPP_OPEN_PAREN);
+
+    /* 2. 判斷程式碼中，此識別字前面的最近非空白字元是否為 '&' */
+    bool preceded_by_amp = false;
+    {
+      expanded_location xl = expand_location (loc);
+      const char *line = location_get_source_line (xl.file, xl.line, NULL);
+
+      /* column 從 1 起算，line[idx] 對應 column = idx+1 */
+      if (line && xl.column > 1)
+        for (int idx = xl.column - 2; idx >= 0; --idx)
+          {
+            char ch = line[idx];
+            if (ch == ' ' || ch == '\t')
+              continue;           /* 跳過空白、Tab */
+            preceded_by_amp = (ch == '&');
+            break;
+          }
+    }
+
+    /* 3. 查符號表：若是函式宣告過，才檢查 MISRA 17.12 */
+    tree decl = lookup_name (id);
+
+    if (!preceded_by_amp
+        && decl && TREE_CODE (decl) == FUNCTION_DECL
+        && !is_call_ctx)
+      warning_at (loc,
+                  0,   /* 第二參數 0 = 永遠啟用，不需額外 -W 選項 */
+                  "MISRA-C rule 17.12");
+
+    /* 4. consume 並回到原本流程 */
         c_parser_consume_token (parser);
-        expr.value = build_external_ref (loc, id,
-                         (c_parser_peek_token (parser)->type
-                          == CPP_OPEN_PAREN),
+        expr.value = build_external_ref (loc, id, is_call_ctx,
                          &expr.original_type);
         set_c_expr_source_range (&expr, tok_range);
         break;
