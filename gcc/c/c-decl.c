@@ -6226,6 +6226,12 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 		| (volatilep ? TYPE_QUAL_VOLATILE : 0)
 		| (atomicp ? TYPE_QUAL_ATOMIC : 0)
 		| ENCODE_QUAL_ADDR_SPACE (address_space));
+  if (atomicp && TREE_CODE (type) == VOID_TYPE)
+  {
+    warning_at (loc, 0, "MISRA-C rule 11.10");
+    atomicp = false;
+  }
+  
   if (type_quals != TYPE_QUALS (element_type))
     orig_qual_type = NULL_TREE;
 
