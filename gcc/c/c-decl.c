@@ -5022,7 +5022,7 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
 			 deprecated_state);
   if (!decl || decl == error_mark_node)
     return NULL_TREE;
-
+  misra18_10_check_decl (decl);
   if (expr)
     add_stmt (fold_convert (void_type_node, expr));
 
@@ -8104,7 +8104,8 @@ grokfield (location_t loc,
 
   finish_decl (value, loc, NULL_TREE, NULL_TREE, NULL_TREE);
   DECL_INITIAL (value) = width;
-
+  // MISRA-C rule 18.10
+  misra18_10_check_decl (value);
   if (warn_cxx_compat && DECL_NAME (value) != NULL_TREE)
     {
       /* If we currently have a binding for this field, set the
@@ -9634,6 +9635,15 @@ store_parm_decls_from (struct c_arg_info *arg_info)
 {
   current_function_arg_info = arg_info;
   store_parm_decls ();
+    /* MISRA-C Rule 18.10 — 檢查本函式所有參數（僅定義會走到這裡） */
+  for (tree p = DECL_ARGUMENTS (current_function_decl); p; p = DECL_CHAIN (p))
+    {
+      tree ty = TREE_TYPE (p);
+      if (misra18_10_ptr_to_vla_p (ty))
+        warning_at (DECL_SOURCE_LOCATION (p), 0,
+                    "MISRA-C Rule 18.10");
+    }
+
 }
 
 /* Called by walk_tree to look for and update context-less labels.  */
@@ -9720,6 +9730,20 @@ store_parm_decls (void)
 				    set_labels_context_r, fndecl);
       add_stmt (arg_info->pending_sizes);
     }
+      /* MISRA C:2012 Rule 18.10 — 檢查本函式所有參數 */
+  for (tree p = DECL_ARGUMENTS (current_function_decl); p; p = DECL_CHAIN (p))
+    {
+      if (misra18_10_ptr_to_vla_p (TREE_TYPE (p)))
+        warning_at (DECL_SOURCE_LOCATION (p), 0,
+                    "MISRA-C Rule 18.10");
+    }
+      /* MISRA-C Rule 22.13 — 參數不得為 thrd_t/mtx_t/cnd_t/tss_t（自動儲存期） */
+  {
+    tree f = current_function_decl;
+    for (tree p = f ? DECL_ARGUMENTS (f) : NULL_TREE; p; p = DECL_CHAIN (p))
+      misra2213_check_decl (p);  /* 這個函式會針對 PARM_DECL 自動發 warning_at(..., 0, ...) */
+  }
+
 }
 
 /* Store PARM_DECLs in PARMS into scope temporarily.  Used for
