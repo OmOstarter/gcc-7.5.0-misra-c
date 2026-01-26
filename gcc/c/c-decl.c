@@ -5135,6 +5135,19 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
 
   /* Set attributes here so if duplicate decl, will have proper attributes.  */
   c_decl_attributes (&decl, attributes, 0);
+  if (TREE_CODE (decl) == FUNCTION_DECL
+      && (declspecs->noreturn_p
+          || lookup_attribute ("noreturn", DECL_ATTRIBUTES (decl))))
+    {
+      tree fn_type = TREE_TYPE (decl);          /* FUNCTION_TYPE        */
+      if (fn_type && TREE_CODE (fn_type) == FUNCTION_TYPE)
+        {
+          tree result_type = TREE_TYPE (fn_type);
+          if (TREE_CODE (result_type) != VOID_TYPE)
+            warning_at (DECL_SOURCE_LOCATION (decl), 0,
+                        "MISRA-C rule 17.10");
+        }
+    }
 
   /* Handle gnu_inline attribute.  */
   if (declspecs->inline_p
