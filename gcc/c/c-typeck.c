@@ -2236,6 +2236,16 @@ mark_exp_read (tree exp)
 struct c_expr
 default_function_array_conversion (location_t loc, struct c_expr exp)
 {
+  /* ---------- MISRA-C Rule 18.9 ---------- */
+  tree t = exp.value;          /* 取真正 tree 節點 */
+
+  if (TREE_CODE (t) == COMPONENT_REF
+      && TREE_CODE (TREE_TYPE (t)) == ARRAY_TYPE
+      && !lvalue_p (TREE_OPERAND (t, 0)))
+    warning_at (loc, 0,
+                "MISRA-C Rule 18.9");
+
+  /* ---------- 以下保留原始程式不動 ---------- */
   tree orig_exp = exp.value;
   tree type = TREE_TYPE (exp.value);
   enum tree_code code = TREE_CODE (type);
@@ -2438,9 +2448,23 @@ default_conversion (tree exp)
 
   /* Functions and arrays have been converted during parsing.  */
   gcc_assert (code != FUNCTION_TYPE);
+ /*------------------------------------------------------------*
+   * MISRA-C:2012 Rule 18.9                                     *
+   * 若臨時物件(struct/union) 的陣列成員進行 array-to-pointer  *
+   * 轉換，立即發警告                                          *
+   *------------------------------------------------------------*/
   if (code == ARRAY_TYPE)
-    return exp;
+    {
+      /* 只針對 obj.array 這種 COMPONENT_REF；obj 需為非 lvalue */
+      if (TREE_CODE (exp) == COMPONENT_REF
+          && !lvalue_p (TREE_OPERAND (exp, 0)))
+        warning_at (EXPR_LOC_OR_LOC (exp, input_location),
+                    0,
+                    "MISRA 18.9 (array-to-pointer conversion of temporary object)");
 
+      /* 保持原有行為：回傳 array 給呼叫端做 decay */
+      return exp;
+    }
   /* Constants can be used directly unless they're not loadable.  */
   if (TREE_CODE (exp) == CONST_DECL)
     exp = DECL_INITIAL (exp);
@@ -6512,6 +6536,23 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 		   enum tree_code modifycode,
 		   location_t rhs_loc, tree rhs, tree rhs_origtype)
 {
+  /* ---- MISRA-C Rule 18.9 : write to element of temporary array ---- */
+  {
+  tree lv = lhs;                       /* lhs 就是 tree */
+
+  /* lvalue 必須是 ARRAY_REF (…[i])，其第一 operand 為 COMPONENT_REF (obj.array) */
+  if (TREE_CODE (lv) == ARRAY_REF
+      && TREE_CODE (TREE_OPERAND (lv, 0)) == COMPONENT_REF)
+    {
+      tree comp = TREE_OPERAND (lv, 0);      /* obj.array */
+      tree base = TREE_OPERAND (comp, 0);    /* obj */
+
+      if (!lvalue_p (base))                  /* obj 是臨時值 → 違規 */
+        warning_at (location, 0,             /* ← 用函式參數 `location` */
+                    "MISRA-C Rule 18.9");
+    }
+  }
+
   tree result;
   tree newrhs;
   tree rhseval = NULL_TREE;

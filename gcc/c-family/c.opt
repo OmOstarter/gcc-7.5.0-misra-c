@@ -569,7 +569,7 @@ C ObjC C++ ObjC++ Joined RejectNegative UInteger Var(warn_format_trunc) Warning 
 Warn about calls to snprintf and similar functions that truncate output.
 
 Wignored-qualifiers
-C C++ Var(warn_ignored_qualifiers) Warning EnabledBy(Wextra)
+C C++ Var(warn_ignored_qualifiers) Init(1) Warning EnabledBy(Wextra)
 Warn whenever type qualifiers are ignored.
 
 Wignored-attributes
