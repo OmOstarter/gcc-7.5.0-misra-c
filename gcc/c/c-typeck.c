@@ -11055,7 +11055,7 @@ c_finish_return (location_t loc, tree retval, tree origtype)
 
   if (TREE_THIS_VOLATILE (current_function_decl))
     warning_at (xloc, 0,
-		"function declared %<noreturn%> has a %<return%> statement");
+		"function declared %<noreturn%> has a %<return%> statement MISRA-C rule 17.9");
 
   if (flag_cilkplus && contains_array_notation_expr (retval))
     {
