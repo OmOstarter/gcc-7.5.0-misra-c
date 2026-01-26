@@ -2712,10 +2712,10 @@ build_component_ref (location_t loc, tree datum, tree component,
 	{
 	  if (code == RECORD_TYPE)
 	    warning_at (loc, 0, "accessing a member %qE of an atomic "
-			"structure %qE", component, datum);
+			"structure %qE MISRA-C rule 12.6", component, datum);
 	  else
 	    warning_at (loc, 0, "accessing a member %qE of an atomic "
-			"union %qE", component, datum);
+			"union %qE MISRA-C rule 12.6", component, datum);
 	}
 
       /* Chain the COMPONENT_REFs if necessary down to the FIELD.

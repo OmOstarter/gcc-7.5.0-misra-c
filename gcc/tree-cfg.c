@@ -8971,7 +8971,7 @@ pass_warn_function_return::execute (function *fun)
 	}
       if (location == UNKNOWN_LOCATION)
 	location = cfun->function_end_locus;
-      warning_at (location, 0, "%<noreturn%> function does return");
+      warning_at (location, 0, "%<noreturn%> function does return MISRA-C Rule 17.9");
     }
 
   /* If we see "return;" in some basic block, then we do reach the end
