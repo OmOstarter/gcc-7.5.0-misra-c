@@ -3410,11 +3410,140 @@ long long int misra_21_15_tmp[4];
 int misra_21_15_counter;
 long long int misra_21_16_tmp[4];
 int misra_21_16_counter;
+
+/* === MISRA Rule 1.4：Annex K 函式名清單 === */
+static bool
+misra_is_annex_k_function_name (const char *name)
+{
+  static const char *const list[] = {
+    /* 記憶體相關 */
+    "memcpy_s", "memmove_s", "memset_s",
+
+    /* 窄字元字串 */
+    "strcpy_s", "strncpy_s", "strcat_s", "strncat_s",
+    "strtok_s", "strnlen_s",
+
+    /* printf / scanf 家族（窄字元） */
+    "fprintf_s", "printf_s", "scanf_s", "sscanf_s",
+    "vfprintf_s", "vfscanf_s", "vprintf_s", "vscanf_s", "vsscanf_s",
+    "sprintf_s", "vsprintf_s", "snprintf_s", "vsnprintf_s",
+
+    /* gets_s */
+    "gets_s",
+
+    /* 搜尋 / 排序 */
+    "bsearch_s", "qsort_s",
+
+    /* 檔案 / 暫存檔 */
+    "fopen_s", "freopen_s", "tmpfile_s", "tmpnam_s",
+
+    /* 時間 */
+    "ctime_s", "gmtime_s", "localtime_s", "asctime_s",
+
+    /* 環境 */
+    "getenv_s",
+
+    /* 錯誤訊息 */
+    "strerror_s", "strerrorlen_s",
+
+    /* 寬字元 I/O / 格式化輸出入 */
+    "fwprintf_s", "fwscanf_s", "snwprintf_s", "swprintf_s", "swscanf_s",
+    "vfwprintf_s", "vfwscanf_s", "vsnwprintf_s", "vswprintf_s",
+    "vswscanf_s", "vwprintf_s", "vwscanf_s", "wprintf_s", "wscanf_s",
+
+    /* 字元轉換 */
+    "wctomb_s", "mbstowcs_s", "wcstombs_s",
+    "wcrtomb_s", "mbsrtowcs_s", "wcsrtombs_s",
+
+    /* 寬字元字串／記憶體 */
+    "wcscpy_s", "wcsncpy_s", "wmemcpy_s", "wmemmove_s",
+    "wcscat_s", "wcsncat_s", "wcstok_s", "wcsnlen_s",
+
+    /* constraint handler */
+    "set_constraint_handler_s", "abort_handler_s", "ignore_handler_s",
+
+    NULL
+  };
+
+  if (!name)
+    return false;
+
+  for (int i = 0; list[i] != NULL; ++i)
+    if (strcmp (name, list[i]) == 0)
+      return true;
+
+  return false;
+}
+
+
 tree
 build_function_call_vec (location_t loc, vec<location_t> arg_loc,
 			 tree function, vec<tree, va_gc> *params,
 			 vec<tree, va_gc> *origtypes)
 {
+  /* MISRA-C Rule 21.21: 禁用標準函式 system() */
+  {
+    tree target = NULL_TREE;
+    /* 直接呼叫：function 是 FUNCTION_DECL */
+    if (function && TREE_CODE (function) == FUNCTION_DECL)
+      target = function;
+    /* 間接呼叫：function 是 &f 的位址（或等價形式） */
+    else if (function
+             && TREE_CODE (function) == ADDR_EXPR
+             && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+      target = TREE_OPERAND (function, 0);
+
+    if (target && DECL_NAME (target))
+      {
+        const char *name = IDENTIFIER_POINTER (DECL_NAME (target));
+        if (name && strcmp (name, "system") == 0)
+          error_at (loc,
+            "MISRA-C Rule 21.21");
+      }
+  }
+  /* —— MISRA-C Rule 21.24：禁用 rand / srand —— */
+  {
+    tree target = NULL_TREE;
+    if (function && TREE_CODE (function) == FUNCTION_DECL)
+      target = function;
+    else if (function
+             && TREE_CODE (function) == ADDR_EXPR
+             && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+      target = TREE_OPERAND (function, 0);
+
+    if (target && DECL_NAME (target))
+      {
+        const char *name = IDENTIFIER_POINTER (  DECL_NAME (target));
+        if (name && (strcmp (name, "rand") == 0 || strcmp (name, "srand") == 0))
+          warning_at (loc, 0, "MISRA-C: Rule 21.24");
+      }
+  }
+
+  /* —— MISRA-C Rule 1.4：禁止 Annex K 函式 —— */
+  {
+    tree target = NULL_TREE;
+
+    if (function && TREE_CODE (function) == FUNCTION_DECL)
+      target = function;
+    else if (function
+             && TREE_CODE (function) == ADDR_EXPR
+             && TREE_CODE (TREE_OPERAND (function, 0)) == FUNCTION_DECL)
+      target = TREE_OPERAND (function, 0);
+
+    if (target && DECL_NAME (target))
+      {
+        const char *fname = IDENTIFIER_POINTER (DECL_NAME (target));
+        if (fname
+            && misra_is_annex_k_function_name (fname)
+            && !in_system_header_at (loc)
+            && !misra_suppress_for_internal (loc))
+          {
+            warning_at (loc, 0,
+                        "MISRA-C: Rule 1.4: Annex K function '%s' shall not be used",
+                        fname);
+          }
+      }
+  }
   tree fntype, fundecl = 0;
   tree name = NULL_TREE, result;
   tree tem;
