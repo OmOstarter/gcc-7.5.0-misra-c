@@ -8263,6 +8263,22 @@ c_parser_generic_selection (c_parser *parser)
       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
       return selector;
     }
+  /* ===== MISRA 23.2：非巨集展開時，控制運算式不得看起來有副作用 ===== */
+  {
+    tree control_t = selector.value;
+    location_t control_loc = control_t ? EXPR_LOCATION (control_t) : selector_loc;
+
+    if (!in_system_header_at (generic_loc) && !from_macro_expansion_at (generic_loc))
+      {
+        if (control_t && misra_expr_has_potential_side_effects (control_t))
+          {
+            warning_at (control_loc, 0,
+              "MISRA-C: Rule 23.2: controlling expression of %<_Generic%> shall not contain potential side effects when not expanded from a macro");
+          }
+      }
+  }
+/* ===== 以上為新增 ===== */
+
   selector_type = TREE_TYPE (selector.value);
   /* In ISO C terms, rvalues (including the controlling expression of
      _Generic) do not have qualified types.  */
