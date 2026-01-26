@@ -5439,6 +5439,11 @@ finish_decl (tree decl, location_t init_loc, tree init,
 	  TREE_USED (decl) = 1;
 	  DECL_READ_P (decl) = 1;
 	}
+        /* MISRA-C Rule 22.13: always-on check for mtx_t/thrd_t/cnd_t/tss_t
+         with automatic or thread storage duration. 只在 VAR_DECL 跑。 */
+      if (!error_operand_p (decl))
+        misra2213_check_decl (decl);
+
     }
 
   /* If this is a function and an assembler name is specified, reset DECL_RTL
