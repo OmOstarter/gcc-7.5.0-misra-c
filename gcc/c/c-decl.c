@@ -6856,7 +6856,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 		else
 		  warning_at (specs_loc, OPT_Wignored_qualifiers,
 			      "type qualifiers ignored on function "
-			      "return type");
+			      "return type MISRA-C rule 17.13");
 
 		/* Ensure an error for restrict on invalid types; the
 		   DR#423 resolution is not entirely clear about
