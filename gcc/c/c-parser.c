@@ -8882,7 +8882,15 @@ c_parser_generic_selection (c_parser *parser)
       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
       return error_expr;
     }
+      /* === MISRA-C Rule 23.8：紀錄 default 在第幾個 association === */
+      misra238_assoc_index++;
 
+      /* 第一個看到的 default，就記錄它的 index。
+         （就算之後還有 default，那已經是語法錯誤／23.5 類型的問題了，
+          23.8 只看「某一個 default 是否在第一或最後」。） */
+      if (assoc.type == NULL_TREE && misra238_default_index == 0)
+        misra238_default_index = misra238_assoc_index;
+      /* === MISRA-C 23.8 統計結束 === */
       for (ix = 0; associations.iterate (ix, &iter); ++ix)
     {
       if (assoc.type == NULL_TREE)
