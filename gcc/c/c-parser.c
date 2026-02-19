@@ -8198,6 +8198,363 @@ struct c_generic_association
   /* The association's expression.  */
   struct c_expr expression;
 };
+/* ======================================================================= */
+/* MISRA-C: Rule 23.6 helper                                               */
+/* The controlling expression of a generic selection shall have an         */
+/* essential type that matches its standard type.                          */
+/* ======================================================================= */
+
+/* 這個 enum 名稱要和下面的程式碼一致，不能用其他名字。  */
+typedef enum misra_essential_type
+{
+  MISRA_ET_INVALID = 0,
+  MISRA_ET_BOOL,
+  MISRA_ET_ENUM,
+  MISRA_ET_SCHAR,
+  MISRA_ET_UCHAR,
+  MISRA_ET_SSHORT,
+  MISRA_ET_USHORT,
+  MISRA_ET_SINT,
+  MISRA_ET_UINT,
+  MISRA_ET_SLONG,
+  MISRA_ET_ULONG,
+  MISRA_ET_FLOAT32,
+  MISRA_ET_FLOAT64,
+  MISRA_ET_POINTER,
+  MISRA_ET_OTHER
+
+} misra_essential_type;
+
+/* 把「標準型別」（GCC 的 tree type）壓成 MISRA 的本質整數階層。  */
+static misra_essential_type
+misra_essential_type_of_type (tree type)
+{
+  if (!type)
+    return MISRA_ET_INVALID;
+
+  type = TYPE_MAIN_VARIANT (type);
+
+  /* _Bool / bool */
+  if (TREE_CODE (type) == BOOLEAN_TYPE
+#ifdef boolean_type_node
+      || type == boolean_type_node
+#endif
+      )
+    return MISRA_ET_BOOL;
+
+  /* enum 類型（不是常數值，是 enum 型別本身） */
+  if (TREE_CODE (type) == ENUMERAL_TYPE)
+    return MISRA_ET_ENUM;
+
+  if (!INTEGRAL_TYPE_P (type))
+    return MISRA_ET_OTHER;
+
+  {
+    unsigned prec = TYPE_PRECISION (type);
+    bool uns = TYPE_UNSIGNED (type);
+
+    if (prec <= TYPE_PRECISION (signed_char_type_node))
+      return uns ? MISRA_ET_UCHAR : MISRA_ET_SCHAR;
+
+    if (prec <= TYPE_PRECISION (short_integer_type_node))
+      return uns ? MISRA_ET_USHORT : MISRA_ET_SSHORT;
+
+    if (prec <= TYPE_PRECISION (integer_type_node))
+      return uns ? MISRA_ET_UINT : MISRA_ET_SINT;
+
+    if (prec <= TYPE_PRECISION (long_integer_type_node))
+      return uns ? MISRA_ET_ULONG : MISRA_ET_SLONG;
+
+    /* 更大的就統一算成 long 階。  */
+    return uns ? MISRA_ET_ULONG : MISRA_ET_SLONG;
+  }
+}
+
+/* 針對 INTEGER_CST，依「最低階型別」(Type of Lowest Rank) 規則
+   把它的本質型別縮到能容納它值的「最小」整數型別。
+   這個版本只用到 SCHAR/ UCHAR / SSHORT / USHORT / SINT / UINT / SLONG / ULONG，
+   不需要 MISRA_ET_SLLONG / MISRA_ET_ULLONG。 */
+static enum misra_essential_type
+misra_essential_type_of_integer_cst (tree expr)
+{
+  tree type = TREE_TYPE (expr);
+
+  if (!INTEGRAL_TYPE_P (type))
+    return misra_essential_type_of_type (type);
+
+  /* enum 的整數常值：仍然視為 ENUM 類型 */
+  if (TREE_CODE (type) == ENUMERAL_TYPE)
+    return MISRA_ET_ENUM;
+
+  /* 依照「原始型別」的 signed / unsigned 來選候選型別 */
+  bool uns = TYPE_UNSIGNED (type);
+
+  if (uns)
+    {
+      if (int_fits_type_p (expr, unsigned_char_type_node))
+        return MISRA_ET_UCHAR;
+
+#ifdef short_unsigned_type_node
+      if (int_fits_type_p (expr, short_unsigned_type_node))
+        return MISRA_ET_USHORT;
+#endif
+
+      if (int_fits_type_p (expr, unsigned_type_node))
+        return MISRA_ET_UINT;
+
+#ifdef long_unsigned_type_node
+      if (int_fits_type_p (expr, long_unsigned_type_node))
+        return MISRA_ET_ULONG;
+#endif
+
+      /* 比 long 還大的無號整數，一律當成「ULONG 等級」 */
+      return MISRA_ET_ULONG;
+    }
+  else
+    {
+      if (int_fits_type_p (expr, signed_char_type_node))
+        return MISRA_ET_SCHAR;
+
+      if (int_fits_type_p (expr, short_integer_type_node))
+        return MISRA_ET_SSHORT;
+
+      if (int_fits_type_p (expr, integer_type_node))
+        return MISRA_ET_SINT;
+
+      if (int_fits_type_p (expr, long_integer_type_node))
+        return MISRA_ET_SLONG;
+
+      /* 比 long 還大的有號整數，一律當成「SLONG 等級」 */
+      return MISRA_ET_SLONG;
+    }
+}
+static bool misra_is_small_integer_essential_type (enum misra_essential_type et);
+
+/* 回傳 expr 裡面是否有「本質型別為 small 整數（< int）」的變數 */
+static bool
+misra_expr_contains_small_integer_var (tree expr)
+{
+  if (!expr)
+    return false;
+
+  switch (TREE_CODE (expr))
+    {
+    case VAR_DECL:
+    case PARM_DECL:
+      {
+        enum misra_essential_type et
+          = misra_essential_type_of_type (TREE_TYPE (expr));
+        return misra_is_small_integer_essential_type (et);
+      }
+
+    /* 一元運算：繼續往裡面看 operand 0 */
+    case NOP_EXPR:
+    case CONVERT_EXPR:
+    case VIEW_CONVERT_EXPR:
+    case ADDR_EXPR:
+    case INDIRECT_REF:
+    case NEGATE_EXPR:
+    case BIT_NOT_EXPR:
+      return misra_expr_contains_small_integer_var (TREE_OPERAND (expr, 0));
+
+    /* 二元算術／位元運算／移位：只要任一邊含 small 整數變數就算 */
+    case PLUS_EXPR:
+    case MINUS_EXPR:
+    case MULT_EXPR:
+    case TRUNC_DIV_EXPR:
+    case TRUNC_MOD_EXPR:
+    case BIT_IOR_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_AND_EXPR:
+    case LSHIFT_EXPR:
+    case RSHIFT_EXPR:
+      return (misra_expr_contains_small_integer_var (TREE_OPERAND (expr, 0))
+              || misra_expr_contains_small_integer_var (TREE_OPERAND (expr, 1)));
+
+    /* 三元運算：看 true / false 分支 */
+    case COND_EXPR:
+      return (misra_expr_contains_small_integer_var (TREE_OPERAND (expr, 1))
+              || misra_expr_contains_small_integer_var (TREE_OPERAND (expr, 2)));
+
+    /* 逗號運算：看右邊的結果 */
+    case COMPOUND_EXPR:
+      return misra_expr_contains_small_integer_var (TREE_OPERAND (expr, 1));
+
+    default:
+      break;
+    }
+
+  return false;
+}
+
+
+/* 從「運算式的 tree」去推本質型別：
+   - 會穿透 NOP/CONVERT/VIEW_CONVERT
+   - 對 enum 類型 / enum 常數做特別處理
+   - 對整數常值用最低階型別規則
+   - 對二元運算，若兩邊本質型別一樣，就用那個 */
+static enum misra_essential_type
+misra_essential_type_of_expr (tree expr)
+{
+  if (!expr)
+    return MISRA_ET_INVALID;
+
+  tree type = TREE_TYPE (expr);
+
+  /* enum 類型的運算式，一律視為本質 enum */
+  if (type && TREE_CODE (type) == ENUMERAL_TYPE)
+    return MISRA_ET_ENUM;
+
+  /* 整數常值：用最低階型別規則 */
+  if (TREE_CODE (expr) == INTEGER_CST)
+    return misra_essential_type_of_integer_cst (expr);
+
+  /* 先用 type-based 的本質型別當基準 */
+  enum misra_essential_type base = misra_essential_type_of_type (type);
+
+  /* 如果標準型別是 int / unsigned int，
+     而且 expr 裡有 small 整數變數，且不是常值，
+     則把本質型別視為「small 整數」來處理。 */
+  if ((base == MISRA_ET_SINT || base == MISRA_ET_UINT)
+      && !TREE_CONSTANT (expr)
+      && misra_expr_contains_small_integer_var (expr))
+    {
+      /* 不細分到 char / short，對 23.6 只要「< int」就夠用 */
+      return (base == MISRA_ET_SINT) ? MISRA_ET_SSHORT : MISRA_ET_USHORT;
+    }
+
+  return base;
+}
+
+
+static bool
+misra_is_small_integer_essential_type (misra_essential_type et)
+{
+  switch (et)
+    {
+    case MISRA_ET_SCHAR:
+    case MISRA_ET_UCHAR:
+    case MISRA_ET_SSHORT:
+    case MISRA_ET_USHORT:
+      return true;
+
+    default:
+      return false;
+    }
+}
+
+/* 23.6 的「整數常值例外」：
+   - 控制運算元是整數常值（TREE_CONSTANT + INTEGRAL_TYPE_P）
+   - 本質型別是低於 int 階的小整數
+   - 不是本質布林、不是 enum
+   - 不是字元常數（靠 selector->original_type 分辨）
+   - 被選 association 的本質型別是 SINT 或 UINT */
+static bool
+misra_rule236_is_exception (struct c_expr *selector,
+                            misra_essential_type et_ctrl,
+                            misra_essential_type et_std)
+{
+  tree expr;
+
+  if (!selector)
+    return false;
+
+  expr = selector->value;
+  if (!expr)
+    return false;
+
+  /* 必須是整數常值運算式。 */
+  if (!TREE_CONSTANT (expr)
+      || !INTEGRAL_TYPE_P (TREE_TYPE (expr)))
+    return false;
+
+  /* 字元常數不適用例外（需要前面在 parser 設好 original_type）。 */
+  if (selector->original_type == char_type_node
+      || selector->original_type == signed_char_type_node
+      || selector->original_type == unsigned_char_type_node)
+    return false;
+
+  /* 本質布林或 enum 不適用例外。 */
+  if (et_ctrl == MISRA_ET_BOOL || et_ctrl == MISRA_ET_ENUM)
+    return false;
+
+  /* 只放寬「低於 int 階的小整數」。 */
+  if (!misra_is_small_integer_essential_type (et_ctrl))
+    return false;
+
+  /* 並且要是「被提升到 int / unsigned int」。 */
+  if (et_std != MISRA_ET_SINT && et_std != MISRA_ET_UINT)
+    return false;
+
+  return true;
+}
+
+/* 23.6 主檢查：
+   - 控制運算元 = selector->value
+   - 被選關聯型別 = assoc->type（若為 NULL，就吃 expression 的 TREE_TYPE）
+   - 比對兩者本質型別；若不符且不在例外，則報警。 */
+static void
+misra_check_generic_rule236 (location_t generic_loc,
+                             struct c_expr *selector,
+                             struct c_generic_association *assoc)
+{
+  tree assoc_type;
+  misra_essential_type et_ctrl, et_std;
+
+  if (!selector || !assoc)
+    return;
+
+  tree ctrl = selector->value;
+  
+
+  if (!ctrl)
+    return;
+
+  assoc_type = assoc->type;
+  if (!assoc_type && assoc->expression.value)
+    assoc_type = TREE_TYPE (assoc->expression.value);
+
+  if (!assoc_type)
+    return;
+
+  et_ctrl = misra_essential_type_of_expr (ctrl);
+  et_std  = misra_essential_type_of_type (assoc_type);
+
+  /* === 新增：用 original_type 修正本質型別 === */
+  if (selector->original_type)
+    {
+      tree otype = TYPE_MAIN_VARIANT (selector->original_type);
+
+      /* 如果原始型別是 enum，就把本質型別強制當 enum */
+      if (TREE_CODE (otype) == ENUMERAL_TYPE)
+        et_ctrl = MISRA_ET_ENUM;
+
+      /* 如果原始型別是 _Bool / bool，也可以在這裡視為本質布林 */
+      else if (TREE_CODE (otype) == BOOLEAN_TYPE
+#ifdef boolean_type_node
+               || otype == boolean_type_node
+#endif
+               )
+        et_ctrl = MISRA_ET_BOOL;
+    }
+  /* === 新增區塊結束 === */
+
+  if (et_ctrl == MISRA_ET_INVALID || et_std == MISRA_ET_INVALID)
+    return;
+
+  /* 整數常值例外先放行（這裡用的是你的版本：第一個參數是 selector） */
+  if (misra_rule236_is_exception (selector, et_ctrl, et_std))
+    return;
+
+  if (et_ctrl != et_std)
+    {
+      warning_at (generic_loc, 0,
+                  "MISRA-C: Rule 23.6: controlling expression of %<_Generic%> "
+                  "has an essential type that does not match the selected "
+                  "association");
+    }
+}
+
 
 /* Parse a generic-selection.  (C11 6.5.1.1).
    
@@ -8213,6 +8570,155 @@ struct c_generic_association
      default : assignment-expression
 */
 
+/* === MISRA-C Rule 23.7 helpers: 收集 / 比對 selector 用到的變數 === */
+
+struct misra237_varset
+{
+  auto_vec<tree> vars;
+};
+
+/* 收集一個 expression 裡所有出現的 DECL（變數 / 參數 / 結果等） */
+static tree
+misra237_collect_vars_cb (tree *tp, int *walk_subtrees, void *data_)
+{
+  struct misra237_varset *s = (struct misra237_varset *) data_;
+  tree t = *tp;
+
+  (void) walk_subtrees;  /* 壓掉未使用參數 warning */
+
+  if (!t)
+    return NULL_TREE;
+
+  if (DECL_P (t))  /* VAR_DECL / PARM_DECL / RESULT_DECL / FUNCTION_DECL 等 */
+    {
+      for (unsigned i = 0; i < s->vars.length (); ++i)
+        if (s->vars[i] == t)
+          return NULL_TREE; /* 已經收過了 */
+
+      s->vars.safe_push (t);
+    }
+
+  return NULL_TREE;
+}
+
+/* 把 expr 中用到的變數收進 set->vars */
+static void
+misra237_collect_vars (struct misra237_varset *set, tree expr)
+{
+  set->vars.truncate (0);
+  if (!expr || expr == error_mark_node)
+    return;
+
+  walk_tree (&expr, misra237_collect_vars_cb, set, NULL);
+}
+
+/* 檢查 expr 是否使用 selector_vars 裡的任一個 DECL */
+struct misra237_use_check_data
+{
+  struct misra237_varset *selector_vars;
+  bool found;
+};
+
+static tree
+misra237_use_check_cb (tree *tp, int *walk_subtrees, void *data_)
+{
+  struct misra237_use_check_data *d =
+    (struct misra237_use_check_data *) data_;
+  tree t = *tp;
+
+  if (!t)
+    return NULL_TREE;
+
+  if (DECL_P (t))
+    {
+      for (unsigned j = 0; j < d->selector_vars->vars.length (); ++j)
+        {
+          if (d->selector_vars->vars[j] == t)
+            {
+              d->found = true;
+              *walk_subtrees = 0;  /* 不用再往下走 */
+              return t;            /* 非 NULL → 中止 walk_tree */
+            }
+        }
+    }
+
+  return NULL_TREE;
+}
+
+static bool
+misra237_expr_uses_any_var (tree expr, struct misra237_varset *selector_vars)
+{
+  if (!expr || expr == error_mark_node)
+    return false;
+
+  struct misra237_use_check_data d;
+  d.selector_vars = selector_vars;
+  d.found = false;
+
+  walk_tree (&expr, misra237_use_check_cb, &d, NULL);
+  return d.found;
+}
+/* === MISRA-C Rule 23.7:
+   A generic selection that is expanded from a macro should evaluate its
+   argument only once.
+   策略：如果 selector 用到的變數，在某些 association 的結果有用到、
+   某些 association 完全沒用到 → 可能造成「有時候評估、有時候不評估」。 */
+
+static void
+misra_check_generic_rule237 (location_t generic_loc,
+                             struct c_expr *selector,
+                             auto_vec<c_generic_association> *associations)
+{
+  /* 系統 header 不檢查 */
+  if (in_system_header_at (generic_loc))
+    return;
+
+  /* 先把這條關掉，確認 23.7 正常工作之後再考慮要不要加回來
+  if (!from_macro_expansion_at (generic_loc))
+    return;
+  */
+
+  if (!selector)
+    return;
+
+  tree selector_expr = selector->value;
+  if (!selector_expr || selector_expr == error_mark_node)
+    return;
+
+  struct misra237_varset selector_vars;
+  misra237_collect_vars (&selector_vars, selector_expr);
+
+  /* selector 如果沒用到任何 DECL（純常數）就不檢查 */
+  if (selector_vars.vars.length () == 0)
+    return;
+
+  int used_count = 0;
+  int unused_count = 0;
+
+  unsigned int ix;
+  c_generic_association *iter;
+
+  for (ix = 0; associations->iterate (ix, &iter); ++ix)
+    {
+      tree res = iter->expression.value;
+
+      if (misra237_expr_uses_any_var (res, &selector_vars))
+        used_count++;
+      else
+        unused_count++;
+    }
+
+  if (used_count > 0 && unused_count > 0)
+    {
+      warning_at (generic_loc, 0,
+                  "MISRA-C: Rule 23.7: the controlling expression of "
+                  "%<_Generic%> uses variables that appear in some "
+                  "associations but not in others; the macro argument may "
+                  "be evaluated an inconsistent number of times");
+    }
+}
+
+
 static struct c_expr
 c_parser_generic_selection (c_parser *parser)
 {
@@ -8221,7 +8727,14 @@ c_parser_generic_selection (c_parser *parser)
   struct c_generic_association matched_assoc;
   bool match_found = false;
   location_t generic_loc, selector_loc;
-
+/* === 新增的：Rule 23.3 統計 === */
+  int misra233_non_default_count = 0;
+  bool misra233_default_seen = false;
+/* === 新增結束 === */
+ /* === MISRA-C Rule 23.8：統計 default 位置 === */
+  int misra238_assoc_index = 0;    /* 目前是第幾個 association（1-based） */
+  int misra238_default_index = 0;  /* 0 表示尚未出現 default */
+  /* === MISRA-C 變數結束 === */
   error_expr.original_code = ERROR_MARK;
   error_expr.original_type = NULL;
   error_expr.set_error ();
@@ -8307,12 +8820,14 @@ c_parser_generic_selection (c_parser *parser)
 
       assoc.type_location = token->location;
       if (token->type == CPP_KEYWORD && token->keyword == RID_DEFAULT)
-    {
+    {    
+      misra233_default_seen = true;   /* MISRA 23.3: 看見 default */
       c_parser_consume_token (parser);
       assoc.type = NULL_TREE;
     }
       else
     {
+      misra233_non_default_count++;   /* MISRA 23.3: 非預設關聯 +1 */
       struct c_type_name *type_name;
 
       type_name = c_parser_type_name (parser);
@@ -8408,11 +8923,90 @@ c_parser_generic_selection (c_parser *parser)
       c_parser_consume_token (parser);
     }
 
+  /* === MISRA-C Rule 23.8：default 必須是第一個或最後一個 === */
+  if (!in_system_header_at (generic_loc)          /* 不檢查系統標頭 */
+      /* 你若有 MISRA 開關，就順便加上，例如：flag_misra_c */
+      && misra238_default_index != 0              /* 有 default 才檢查 */
+      && misra238_assoc_index > 1                 /* 至少有兩個 association 才有「中間」這個概念 */
+      && misra238_default_index != 1
+      && misra238_default_index != misra238_assoc_index)
+    {
+      warning_at (generic_loc, 0,
+                  "MISRA-C: Rule 23.8 violation: "
+                  "the default association of this %<_Generic%> "
+                  "shall appear as either the first or the last "
+                  "association");
+      /* 如果你有自己的 misra_* API，就把 warning_at 換成：
+         misra_c_viol (MISRA_RULE_23_8, generic_loc, "..."); 之類的 */
+    }
+  /* === MISRA 23.8 檢查結束 === */
+
+  
+  
+    /* MISRA-C Rule 23.3：只有 default 而沒有任何非預設關聯 → 警告 */
+  if (!in_system_header_at (generic_loc)
+      && misra233_default_seen
+      && misra233_non_default_count == 0)
+    {
+      warning_at (generic_loc, 0,
+                  "MISRA-C: Rule 23.3: %<_Generic%> must contain at least one non-default association");
+    }
+
+    /* ←─ 到這裡為止 ─→ */
+      /* MISRA-C Rule 23.5：generic selection 不應依賴隱式指標型別轉換。
+     條件：
+       - 控制運算元型別是指標（selector_type 是 POINTER_TYPE）
+       - 已經找到 match，且選到的是 default 關聯（matched_assoc.type == NULL_TREE）
+       - 在 association list 裡有某個指標型別，依 C 語言隱式轉換規則，
+         selector_type 可以轉成那個指標型別
+     則發出警告。 */
+  if (!in_system_header_at (generic_loc)
+      && match_found
+      && matched_assoc.type == NULL_TREE
+      && selector_type
+      && TREE_CODE (selector_type) == POINTER_TYPE)
+    {
+      struct c_generic_association *iter;
+      unsigned int ix;
+
+      for (ix = 0; associations.iterate (ix, &iter); ++ix)
+        {
+          tree assoc_type = iter->type;
+
+          /* 跳過 default（type == NULL_TREE） */
+          if (!assoc_type)
+            continue;
+
+          if (TREE_CODE (assoc_type) != POINTER_TYPE)
+            continue;
+
+          if (misra_pointer_implicitly_convertible_p (selector_type,
+                                                      assoc_type))
+            {
+              warning_at (generic_loc, 0,
+                          "MISRA-C: Rule 23.5: controlling expression of "
+                          "%<_Generic%> has pointer type %qT and "
+                          "falls through to %<default%>, even though it "
+                          "could be implicitly converted to association "
+                          "type %qT in other contexts",
+                          selector_type, assoc_type);
+              /* 一個 _Generic 只報一次就好 */
+              break;
+            }
+        }
+    }
+  /* ★ MISRA 23.5 到此結束 ★ */
+  
+  /* MISRA-C: Rule 23.7 檢查：
+     檢查 selector 是否只在所有 association 中一致地使用 */
+  misra_check_generic_rule237 (generic_loc, &selector, &associations);
+
   if (!c_parser_require (parser, CPP_CLOSE_PAREN, "expected %<)%>"))
     {
       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
       return error_expr;
     }
+
 
   if (!match_found)
     {
@@ -8421,6 +9015,10 @@ c_parser_generic_selection (c_parser *parser)
         selector_type);
       return error_expr;
     }
+  /* MISRA-C: Rule 23.6 檢查 */
+  if (!in_system_header_at (generic_loc))
+    misra_check_generic_rule236 (generic_loc, &selector, &matched_assoc);
+
 
   return matched_assoc.expression;
 }
@@ -8513,13 +9111,21 @@ c_parser_postfix_expression (c_parser *parser)
     case CPP_CHAR16:
     case CPP_CHAR32:
     case CPP_WCHAR:
-      expr.value = c_parser_peek_token (parser)->value;
-      /* For the purpose of warning when a pointer is compared with
-     a zero character constant.  */
-      expr.original_type = char_type_node;
-      set_c_expr_source_range (&expr, tok_range);
-      c_parser_consume_token (parser);
-      break;
+            {
+        tree value = c_parser_peek_token (parser)->value;
+        c_parser_consume_token (parser);
+        expr.value = value;
+
+        /* MISRA：記住這是「字元常數」，讓 essential type 能區分它跟一般整數常數。  */
+        if (TREE_TYPE (value) == char_type_node
+            || TREE_TYPE (value) == signed_char_type_node
+            || TREE_TYPE (value) == unsigned_char_type_node)
+          expr.original_type = TREE_TYPE (value);
+        else
+          expr.original_type = TREE_TYPE (value); /* 實務上通常也是 int，但我們用 original_type 當「char literal」記號 */
+
+        break;
+      }
     case CPP_STRING:
     case CPP_STRING16:
     case CPP_STRING32:
