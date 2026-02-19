@@ -8855,6 +8855,19 @@ c_parser_generic_selection (c_parser *parser)
               "%<_Generic%> association has "
               "variable length type");
     }
+      /* === MISRA-C Rule 23.4: association shall list appropriate selectable types === */
+      if (assoc.type
+          && !in_system_header_at (generic_loc)  /* 系統標頭內不吵你，可依需求拿掉這行 */
+          && misra234_is_forbidden_assoc_type (assoc.type))
+        {
+          const char *why = misra234_reason (assoc.type);
+          if (!why) why = "non-selectable type";
+          warning_at (assoc.type_location, 0,
+                      "MISRA-C: Rule 23.4: association shall not use %qs (%qT)",
+                      why, assoc.type);
+        }
+      /* === end MISRA-C Rule 23.4 === */
+
 
       if (!c_parser_require (parser, CPP_COLON, "expected %<:%>"))
     {
