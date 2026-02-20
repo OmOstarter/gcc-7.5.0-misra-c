@@ -8492,6 +8492,22 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
 
   TYPE_FIELDS (t) = fieldlist;
 
+  if (TREE_CODE (t) == UNION_TYPE) {
+    for (x = fieldlist; x; x = DECL_CHAIN (x))
+    {
+        if (TREE_TYPE (x) == error_mark_node)
+            continue;
+
+        // 檢查字段是否為 bit-field
+        if (DECL_BIT_FIELD (x))
+        {
+            // 發出警告，提示 bit-field 出現在 union 中
+            warning_at (DECL_SOURCE_LOCATION (x), 0,
+                        "Misra-C Rule 6.3 a bit-field %qE shall not be declared as a member of a union", DECL_NAME (x));
+        } 
+    }
+  }
+
   maybe_apply_pragma_scalar_storage_order (t);
 
   layout_type (t);
