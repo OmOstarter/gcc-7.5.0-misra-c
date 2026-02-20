@@ -81,6 +81,15 @@ struct macro_arg
 					  stored.  */
 };
 
+/* === MISRA-C Rule 7.5 / 7.6 helper prototype === */
+static void misra_check_integer_constant_macro_arg (cpp_reader *pfile,
+                                                    cpp_hashnode *node,
+                                                    cpp_macro *macro,
+                                                    macro_arg *args,
+                                                    source_location invoc_loc);
+/* === end MISRA-C Rule 7.5 / 7.6 helper prototype === */
+
+
 /* The kind of macro tokens which the instance of
    macro_arg_token_iter is supposed to iterate over.  */
 enum macro_arg_token_kind {
@@ -1221,6 +1230,12 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
 	      pfile->about_to_expand_macro_p = false;
 	      return 0;
 	    }
+    /* === MISRA-C Rule 7.5 / 7.6: 檢查 integer constant macro 的實參與使用 === */
+    if (macro->paramc > 0)
+      misra_check_integer_constant_macro_arg (pfile, node, macro,
+                                              (macro_arg *) buff->base,
+                                              location);
+    /* === MISRA-C Rule 7.5 / 7.6: 結束 === */
 
 	  if (macro->paramc > 0)
 	    replace_args (pfile, node, macro,
@@ -1608,6 +1623,324 @@ expanded_token_index (cpp_reader *pfile, cpp_macro *macro,
     return absolute_token_index;
   return cur_replacement_token - macro->exp.tokens;
 }
+
+/* === MISRA-C Rule 7.5 implementation ==================================== */
+
+/* 簡單判斷這個宏是不是 INTn_C / UINTn_C 類型。
+   目前僅支援 INT8/16/32/64_C 和 UINT8/16/32/64_C，你可以照需求再擴充。 */
+static bool
+misra_get_intconst_macro_info (const unsigned char *uname,
+                               bool *is_unsigned,
+                               unsigned *bits)
+{
+  size_t len;
+  const char *name;
+  const char *p, *q;
+  char digits_buf[8];
+  unsigned long width;
+
+  if (!uname)
+    return false;
+
+  /* 這裡才轉成 const char * 來用字串 API */
+  name = (const char *) uname;
+  len = strlen (name);
+
+  /* 必須以 _C 結尾 */
+  if (!(len >= 3 && name[len - 2] == '_' && name[len - 1] == 'C'))
+    return false;
+
+  /* 判斷是否是 UINT..._C 或 INT..._C */
+  if (strncmp (name, "UINT", 4) == 0)
+    {
+      *is_unsigned = true;
+      p = name + 4;
+    }
+  else if (strncmp (name, "INT", 3) == 0)
+    {
+      *is_unsigned = false;
+      p = name + 3;
+    }
+  else
+    return false;
+
+  /* 目前只接受純數字位數，不處理 LEAST / FAST 這類 */
+  q = name + len - 2; /* 指向 '_' */
+  if (q <= p)
+    return false;
+
+  if ((size_t)(q - p) >= sizeof (digits_buf))
+    return false;
+
+  memcpy (digits_buf, p, q - p);
+  digits_buf[q - p] = '\0';
+
+  width = strtoul (digits_buf, NULL, 10);
+  if (width == 8 || width == 16 || width == 32 || width == 64)
+    {
+      *bits = (unsigned) width;
+      return true;
+    }
+
+  return false;
+}
+/* === MISRA-C Rule 7.6: 取得 int 的位元寬度 ======================= */
+/* 目前先假設 target 為 32-bit int。
+   如果之後你想做成跟 target 設定一致，可以改成：
+
+     #include "cpplib.h"
+     static unsigned
+     misra_get_int_type_width (cpp_reader *pfile)
+     {
+       struct cpp_options *opts = cpp_get_options (pfile);
+       return opts->int_precision;   // 若 cpp_options 裡有這個欄位
+     }
+
+   暫時先固定 32，讓程式可以直接編過、功能先起來。  */
+static unsigned
+misra_get_int_type_width (cpp_reader *pfile)
+{
+  (void) pfile;
+  return 32;
+}
+/* === end MISRA-C Rule 7.6 helper ================================= */
+
+
+/* 檢查一個 token 是否是「沒 suffix 的整數字面常數」，並回傳其數值。
+   回傳值：true = OK 且 *value 內有數值；false = 不是符合條件的常數。 */
+static bool
+misra_parse_unsuffixed_integer_literal (cpp_reader *pfile,
+                                        const cpp_token *tok,
+                                        unsigned long long *value)
+{
+  unsigned int tok_len;
+  unsigned char *buf;
+  unsigned char *end;
+  unsigned char *p;
+  int base = 10;
+
+  if (!tok || tok->type != CPP_NUMBER)
+    return false;
+
+  tok_len = cpp_token_len (tok);
+  if (tok_len == 0)
+    return false;
+
+  /* 用 alloca 暫存字串，macro.c 其他地方也有這種用法 */
+  buf = (unsigned char *) alloca (tok_len + 1);
+  end = cpp_spell_token (pfile, tok, buf, false);
+  *end = '\0';
+
+  p = buf;
+
+  /* 先判斷是不是浮點：有 '.' 或 e/E/p/P 都視為浮點，直接 false */
+  for (unsigned char *t = buf; *t; ++t)
+    {
+      if (*t == '.' || *t == 'e' || *t == 'E' || *t == 'p' || *t == 'P')
+        return false;
+    }
+
+  /* 判斷基底與 digits 範圍 */
+  if (p[0] == '0')
+    {
+      if (p[1] == 'x' || p[1] == 'X')
+        {
+          base = 16;
+          p += 2;
+        }
+      else if (p[1] == 'b' || p[1] == 'B')
+        {
+          base = 2;
+          p += 2;
+        }
+      else if (p[1] != '\0')
+        {
+          base = 8;
+          p += 1;
+        }
+    }
+
+  /* 掃過合法 digits */
+  unsigned char *digits_start = p;
+  while (*p)
+    {
+      unsigned char c = *p;
+      bool ok = false;
+
+      if (base == 16)
+        ok = (c >= '0' && c <= '9')
+          || (c >= 'a' && c <= 'f')
+          || (c >= 'A' && c <= 'F');
+      else if (base == 10)
+        ok = (c >= '0' && c <= '9');
+      else if (base == 8)
+        ok = (c >= '0' && c <= '7');
+      else if (base == 2)
+        ok = (c == '0' || c == '1');
+
+      if (!ok)
+        break;
+
+      ++p;
+    }
+
+  if (p == digits_start)
+    return false; /* 沒有任何 digit */
+
+  /* 後面若還有字元，就只能是整數 suffix：u/U/l/L/i/I/j/J
+     MISRA 要求「不帶 suffix」，所以只要有 suffix 就視為非符合條件 */
+  if (*p != '\0')
+    {
+      const unsigned char *s = p;
+      while (*s)
+        {
+          unsigned char c = *s;
+          if (c == 'u' || c == 'U'
+              || c == 'l' || c == 'L'
+              || c == 'i' || c == 'I'
+              || c == 'j' || c == 'J')
+            {
+              ++s;
+              continue;
+            }
+          /* 有其他怪字元，當作不是單純整數常數 */
+          return false;
+        }
+
+      /* 有 suffix，就不算「unsuffixed」 */
+      return false;
+    }
+
+  /* 解析數值 */
+  {
+    char saved = *p;
+    *p = '\0';
+    errno = 0;
+    unsigned long long v = strtoull ((char *)digits_start, NULL, base);
+    *p = saved;
+
+    if (errno == ERANGE)
+      return false; /* 溢位，當作不合法 */
+    *value = v;
+    return true;
+  }
+}
+
+static void
+misra_check_integer_constant_macro_arg (cpp_reader *pfile,
+                                        cpp_hashnode *node,
+                                        cpp_macro *macro,
+                                        macro_arg *args,
+                                        source_location invoc_loc)
+{
+  const unsigned char *uname;
+  const char *name;
+  bool is_unsigned;
+  unsigned bits;
+
+  macro_arg *arg;
+  const cpp_token *tok;
+  unsigned long long value;
+  unsigned long long maxv;
+
+  /* 你如果有 MISRA 開關，這裡可以加：
+     if (!CPP_OPTION (pfile, misra_enabled)) return; */
+
+  /* 只在 C 模式檢查（避免影響 C++ 等） */
+  if (CPP_OPTION (pfile, cplusplus))
+    return;
+
+  /* 系統 header 不檢查 */
+  if (cpp_in_system_header (pfile))
+    return;
+
+  if (!macro || macro->paramc != 1 || !args)
+    return;
+
+  uname = NODE_NAME (node);
+  if (!misra_get_intconst_macro_info (uname, &is_unsigned, &bits))
+    return; /* 不是 INTn_C / UINTn_C，直接跳過 */
+
+  /* 之後要印字串才用 name（const char *） */
+  name = (const char *) uname;
+  /* === MISRA-C Rule 7.6: 禁用小整數變體的 minimum-width integer constant macros ===
+     small integer = 位元寬度 < int 寬度。 */
+  {
+    unsigned int_bits = misra_get_int_type_width (pfile);
+    if (bits < int_bits)
+      {
+        /* 用 invoc_loc 指在這次宏呼叫的位置（macro 名稱附近） */
+        source_location loc = invoc_loc;
+        cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
+                               "MISRA-C: Rule 7.6: small integer variant of "
+                               "minimum-width integer constant macro \"%s\" "
+                               "shall not be used", name);
+      }
+  }
+  /* === Rule 7.6 檢查結束，以下維持原本 Rule 7.5 的檢查 === */
+
+  arg = &args[0];
+
+  /* Rule 7.5 要求「運算元是單一 unsuffixed 整數 literal」，所以：
+     - 引數裡只能有一個 token
+     - 不能是負號＋常數這種「常數運算式」 */
+  if (arg->count != 1)
+    {
+      if (arg->count > 0)
+        {
+          source_location loc = arg->first[0]->src_loc;
+          cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
+          "MISRA-C: Rule 7.5: argument of integer constant macro \"%s\" "
+          "shall be a single unsuffixed integer literal", name);
+      }
+
+      return;
+    }
+
+  tok = arg->first[0];
+
+  if (!misra_parse_unsuffixed_integer_literal (pfile, tok, &value))
+    {
+      source_location loc = tok->src_loc;
+      cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
+                             "MISRA-C: Rule 7.5: argument of integer constant macro \"%s\" "
+                             "shall be an unsuffixed integer literal", name);
+      return;
+    }
+
+  /* 範圍檢查：unsigned = [0, 2^bits-1]；signed = [0, 2^(bits-1)-1]
+     （MISRA 不允許負號在裡面，所以只需檢查上界） */
+  if (is_unsigned)
+    {
+      if (bits >= 64)
+        maxv = ~0ULL;
+      else
+        maxv = (1ULL << bits) - 1ULL;
+    }
+  else
+    {
+      if (bits >= 64)
+        {
+          /* signed 64 bits 最大正數 2^63-1 */
+          maxv = (1ULL << 63) - 1ULL;
+        }
+      else
+        maxv = (1ULL << (bits - 1)) - 1ULL;
+    }
+
+  if (value > maxv)
+    {
+      source_location loc = tok->src_loc;
+      cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
+                             "MISRA-C rule 7.5: value \"%s\" is outside the "
+                             "range of %s%u-bit type implied by \"%s\"",
+                             NODE_NAME (node), is_unsigned ? "unsigned " : "",
+                             bits, name);
+
+    }
+}
+
+/* === end MISRA-C Rule 7.5 implementation ================================ */
 
 /* Replace the parameters in a function-like macro of NODE with the
    actual ARGS, and place the result in a newly pushed token context.
@@ -2817,6 +3150,7 @@ warn_of_redefinition (cpp_reader *pfile, cpp_hashnode *node,
   unsigned int i;
   //cpp_pedwarning (pfile,CPP_W_NONE,"char %s",NODE_NAME (node));
   /* Some redefinitions need to be warned about regardless.  */
+  if (node->flags & NODE_WARN)
     return true;
 
   /* Suppress warnings for builtins that lack the NODE_WARN flag,
