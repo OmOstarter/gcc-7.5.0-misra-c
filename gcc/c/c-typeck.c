@@ -3539,8 +3539,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
             && !misra_suppress_for_internal (loc))
           {
             warning_at (loc, 0,
-                        "MISRA-C: Rule 1.4: Annex K function '%s' shall not be used",
-                        fname);
+                        "MISRA-C: Rule 1.4");
           }
       }
   }
@@ -3786,7 +3785,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
             location_t s = spot_for_arg (idx);
             if (!misra_suppress_for_internal (s))
               warning_at (s, 0,
-                "MISRA-C: Rule 21.25 violation: memory order must be 'memory_order_seq_cst'");
+                "MISRA-C: Rule 21.25");
           };
 
           bool handled = false;
@@ -4000,8 +3999,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
                 {
                   location_t wloc = loc; /* 或 EXPR_LOCATION(a0) */
                   warning_at (wloc, 0,
-                    "MISRA-C: Rule 21.26: 'mtx_timedlock' applied to a mutex not "
-                    "initialized with 'mtx_timed' (or 'mtx_timed | mtx_recursive').");
+                    "MISRA-C: Rule 21.26");
                 }
             }
           /* 查無初始化紀錄：保守不報（避免誤報） */

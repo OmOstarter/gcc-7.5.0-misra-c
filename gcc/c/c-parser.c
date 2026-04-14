@@ -8549,9 +8549,7 @@ misra_check_generic_rule236 (location_t generic_loc,
   if (et_ctrl != et_std)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.6: controlling expression of %<_Generic%> "
-                  "has an essential type that does not match the selected "
-                  "association");
+                  "MISRA-C: Rule 23.6");
     }
 }
 
@@ -8711,10 +8709,7 @@ misra_check_generic_rule237 (location_t generic_loc,
   if (used_count > 0 && unused_count > 0)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.7: the controlling expression of "
-                  "%<_Generic%> uses variables that appear in some "
-                  "associations but not in others; the macro argument may "
-                  "be evaluated an inconsistent number of times");
+                  "MISRA-C: Rule 23.7");
     }
 }
 
@@ -8751,7 +8746,7 @@ c_parser_generic_selection (c_parser *parser)
       /* GCC 7 可用：from_macro_expansion_at(loc) */
       if (!from_macro_expansion_at (generic_loc))
         warning_at (generic_loc, 0,
-                    "MISRA-C: Rule 23.1: %<_Generic%> should be expanded from a function-like macro");
+                    "MISRA-C: Rule 23.1");
     }
 
   c_parser_consume_token (parser);
@@ -8786,7 +8781,7 @@ c_parser_generic_selection (c_parser *parser)
         if (control_t && misra_expr_has_potential_side_effects (control_t))
           {
             warning_at (control_loc, 0,
-              "MISRA-C: Rule 23.2: controlling expression of %<_Generic%> shall not contain potential side effects when not expanded from a macro");
+              "MISRA-C: Rule 23.2");
           }
       }
   }
@@ -8863,8 +8858,7 @@ c_parser_generic_selection (c_parser *parser)
           const char *why = misra234_reason (assoc.type);
           if (!why) why = "non-selectable type";
           warning_at (assoc.type_location, 0,
-                      "MISRA-C: Rule 23.4: association shall not use %qs (%qT)",
-                      why, assoc.type);
+                      "MISRA-C: Rule 23.4");
         }
       /* === end MISRA-C Rule 23.4 === */
 
@@ -8953,10 +8947,7 @@ c_parser_generic_selection (c_parser *parser)
       && misra238_default_index != misra238_assoc_index)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.8 violation: "
-                  "the default association of this %<_Generic%> "
-                  "shall appear as either the first or the last "
-                  "association");
+                  "MISRA-C: Rule 23.8");
       /* 如果你有自己的 misra_* API，就把 warning_at 換成：
          misra_c_viol (MISRA_RULE_23_8, generic_loc, "..."); 之類的 */
     }
@@ -8970,7 +8961,7 @@ c_parser_generic_selection (c_parser *parser)
       && misra233_non_default_count == 0)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.3: %<_Generic%> must contain at least one non-default association");
+                  "MISRA-C: Rule 23.3");
     }
 
     /* ←─ 到這裡為止 ─→ */
@@ -9005,12 +8996,7 @@ c_parser_generic_selection (c_parser *parser)
                                                       assoc_type))
             {
               warning_at (generic_loc, 0,
-                          "MISRA-C: Rule 23.5: controlling expression of "
-                          "%<_Generic%> has pointer type %qT and "
-                          "falls through to %<default%>, even though it "
-                          "could be implicitly converted to association "
-                          "type %qT in other contexts",
-                          selector_type, assoc_type);
+                          "MISRA-C: Rule 23.5");
               /* 一個 _Generic 只報一次就好 */
               break;
             }

@@ -1872,9 +1872,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
         /* 用 invoc_loc 指在這次宏呼叫的位置（macro 名稱附近） */
         source_location loc = invoc_loc;
         cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-                               "MISRA-C: Rule 7.6: small integer variant of "
-                               "minimum-width integer constant macro \"%s\" "
-                               "shall not be used", name);
+                               "MISRA-C: Rule 7.6");
       }
   }
   /* === Rule 7.6 檢查結束，以下維持原本 Rule 7.5 的檢查 === */
@@ -1890,8 +1888,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
         {
           source_location loc = arg->first[0]->src_loc;
           cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-          "MISRA-C: Rule 7.5: argument of integer constant macro \"%s\" "
-          "shall be a single unsuffixed integer literal", name);
+                    "MISRA-C: Rule 7.5");
       }
 
       return;
@@ -1903,8 +1900,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
     {
       source_location loc = tok->src_loc;
       cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-                             "MISRA-C: Rule 7.5: argument of integer constant macro \"%s\" "
-                             "shall be an unsuffixed integer literal", name);
+                             "MISRA-C: Rule 7.5");
       return;
     }
 
