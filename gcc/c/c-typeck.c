@@ -144,8 +144,7 @@ misra_2122_ignore_last_arg (const char *name)
 /* ======================================================================= */
 
 
-static bool any_chained_designator_seen = false; // For MISRA-C 9.6
-static bool any_positional_initializer_seen = false; // For MISRA-C 9.6
+/* MISRA-C 9.6 tracking is now per-level in constructor_stack; no globals needed. */
 
 /* === MISRA 21.23 helpers (always-on, no option) ======================== */
 static bool
@@ -9083,6 +9082,12 @@ struct constructor_stack
   char incremental;
   char designated;
   int designator_depth;
+  /* MISRA-C Rule 9.6 per-level state */
+  bool misra_96_has_chained;       /* any element at this level with designator_depth > 1 */
+  bool misra_96_has_designated;    /* any element at this level with designator_depth >= 1 */
+  bool misra_96_has_positional;    /* any element at this level with designator_depth == 0 */
+  bool misra_96_entered_via_desig; /* this explicit brace level was opened via a designator */
+  bool misra_96_reported;          /* violation already reported at this level */
 };
 
 static struct constructor_stack *constructor_stack;
@@ -9256,6 +9261,11 @@ really_start_incremental_init (tree type)
   p->designated = constructor_designated;
   p->designator_depth = designator_depth;
   p->next = 0;
+  p->misra_96_has_chained = false;
+  p->misra_96_has_designated = false;
+  p->misra_96_has_positional = false;
+  p->misra_96_entered_via_desig = false;
+  p->misra_96_reported = false;
   constructor_stack = p;
 
   constructor_constant = 1;
@@ -9423,6 +9433,13 @@ push_init_level (location_t loc, int implicit,
   p->designator_depth = designator_depth;
   p->next = constructor_stack;
   p->range_stack = 0;
+  /* MISRA-C 9.6: for explicit braces, record whether parent used a designator.
+     designator_depth here is the parent's depth, before it gets reset below. */
+  p->misra_96_has_chained = false;
+  p->misra_96_has_designated = false;
+  p->misra_96_has_positional = false;
+  p->misra_96_entered_via_desig = !implicit && (designator_depth > 0);
+  p->misra_96_reported = false;
   constructor_stack = p;
 
   constructor_constant = 1;
@@ -10916,23 +10933,38 @@ void
 process_init_element (location_t loc, struct c_expr value, bool implicit,
 		      struct obstack * braced_init_obstack)
 {
-    /* 偵測 chained designator */
-  if (designator_depth > 1)
-    any_chained_designator_seen = true;
+  /* MISRA-C Rule 9.6: per-level tracking.
+     Only check user-written elements (not implicit zero-fill from pop_init_level). */
+  if (!implicit && constructor_stack)
+    {
+      if (designator_depth > 1)
+        constructor_stack->misra_96_has_chained = true;
+      if (designator_depth >= 1)
+        constructor_stack->misra_96_has_designated = true;
+      if (designator_depth == 0)
+        constructor_stack->misra_96_has_positional = true;
 
-  /* 偵測位置初始化 */
-  if (designator_depth == 0)
-    any_positional_initializer_seen = true;
-
-  /* 如果混用就報錯 */
-  if (any_chained_designator_seen && any_positional_initializer_seen)
-  {
-    warning_at (loc, 0,
-      "MISRA-C rule 9.6");
-    // 防止重複報告
-    any_chained_designator_seen = false;
-    any_positional_initializer_seen = false;
-  }
+      /* Violation case 1: explicit chained designator mixed with positional at
+         the same brace level (e.g. { 1, .s.x = 2, 3 }).
+         Violation case 2: a braced sub-object that was opened via a designator
+         (making inner designators effectively chained) has mixed designated +
+         positional elements inside (e.g. .s = { .x = 2, 3 }).
+         Exception: a braced sub-object with ONLY positional elements is fine
+         (misra_96_has_designated stays false, so case 2 never fires). */
+      if (!constructor_stack->misra_96_reported)
+        {
+          bool v1 = (constructor_stack->misra_96_has_chained
+                     && constructor_stack->misra_96_has_positional);
+          bool v2 = (constructor_stack->misra_96_entered_via_desig
+                     && constructor_stack->misra_96_has_designated
+                     && constructor_stack->misra_96_has_positional);
+          if (v1 || v2)
+            {
+              warning_at (loc, 0, "MISRA-C rule 9.6");
+              constructor_stack->misra_96_reported = true;
+            }
+        }
+    }
   tree orig_value = value.value;
   int string_flag = orig_value != 0 && TREE_CODE (orig_value) == STRING_CST;
   bool strict_string = value.original_code == STRING_CST;
