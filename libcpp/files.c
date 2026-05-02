@@ -381,47 +381,35 @@ if(strcmp(file->name, name_before) !=0 )
  {
    if(strcmp(file->name, "setjmp.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n================================Misra-c 2012 rule violation:21.4================================\n"\
-		"Rule 21.4:The standard header file <setjmp.h> shall not be used\n"\
-		"Category:  Required\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.4\n");
       strcpy(name_before,"setjmp.h");
    }
    else if(strcmp(file->name, "signal.h") == 0)	
 	
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================Misra-c 2012 rule violation:21.5==========================\n"\
-		"Rule 21.5:The standard header file <signal.h> shall not be used\n"\
-		"Category:  Required\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.5\n");
       strcpy(name_before,"signal.h");
    }
 	
 
    else if(strcmp(file->name, "stdio.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================Misra-c 2012 rule violation:21.6==========================\n"\
-		"Rule 21.6:The Standard Library input/output functions shall not be used\n"\
-		"Category:  Required\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.6\n");
       strcpy(name_before,"stdio.h");
    }
    else if(strcmp(file->name, "wchar.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================Misra-c 2012 rule violation:21.6==========================\n"\
-		"Rule 21.6:The Standard Library input/output functions shall not be used\n"\
-		"Category:  Required\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.6\n");
       strcpy(name_before,"wchar.h");
    }
    else if(strcmp(file->name, "time.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================Misra-c 2012 rule violation:21.10==========================\n"\
-		"Rule 21.10:The Standard Library time and date functions shall not be used\n"\
-		"Category:  Required\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.10\n");
       strcpy(name_before,"time.h");
    }
    else if(strcmp(file->name, "tgmath.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================Misra-c 2012 rule violation:21.11==========================\n"\
-		"Rule 21.11:The standard header file <tgmath.h> shall not be used\n"\
-		"Category:  Required\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.11\n");
       strcpy(name_before,"tgmath.h");
    }
    else{}

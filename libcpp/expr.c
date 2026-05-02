@@ -592,7 +592,7 @@ cpp_classify_number (cpp_reader *pfile, const cpp_token *token,
           str-=2;
 	  if ((radix == 8 && c != '.' && !misra_flags_check_Decimal_point)) {
 		if (((*str != '0' && *str < '9')) && CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
-			SYNTAX_WARNING_AT(virtual_location, "\n==========================Misra-c 2012 rule violation:7.1==========================\nRule 7.1 Octal constants shall not be used\nCategory: Required\n");		
+			SYNTAX_WARNING_AT(virtual_location, "MISRA C:2025 Rule 7.1\n");		
 		}
 	  }
 	  str++;
@@ -610,7 +610,7 @@ cpp_classify_number (cpp_reader *pfile, const cpp_token *token,
       result = interpret_float_suffix (pfile, str, limit - str);
       if (lowercase_l_suffix && CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
                 lowercase_l_suffix = 0;
-                SYNTAX_WARNING_AT2(virtual_location, "\n==========================Misra-c 2012 rule violation:7.3==========================\nRule 7.3 The lowercase character 'l' shall not be used in a literal suffix\nCategory: Required\n");
+                SYNTAX_WARNING_AT2(virtual_location, "MISRA C:2025 Rule 7.3\n");
                 lowercase_l_suffix = 0; // May become invalid after the warning is finished
         }
       if ((result & CPP_N_FRACT) || (result & CPP_N_ACCUM))

@@ -41,7 +41,7 @@ unsigned int hash_value_compute(char *key)						//5.4
         return value % HASH_SIZE;
 }
 struct node{
-	char key[31];
+	char key[64];
 	int used_flag;
 };
 struct node HASH_TABLE[HASH_SIZE];
@@ -242,8 +242,9 @@ _cpp_warn_if_unused_macro (cpp_reader *pfile, cpp_hashnode *node,
       if (!macro->used
 	  && MAIN_FILE_P (linemap_check_ordinary
 			    (linemap_lookup (pfile->line_table,
-					     macro->line)))) { 
-	cpp_warning_with_line(pfile, CPP_W_NONE, macro->line, 0, "Misra-C Rule 2.5 macro \"%s\" is not used\n", NODE_NAME (node));		
+					     macro->line)))
+	  && CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
+	cpp_warning_with_line(pfile, CPP_W_NONE, macro->line, 0, "MISRA C:2025 Rule 2.5\n", NODE_NAME (node));		
 	cpp_warning_with_line (pfile, CPP_W_UNUSED_MACROS, macro->line, 0,
 			       "macro \"%s\" is not used", NODE_NAME (node));
        }
@@ -921,7 +922,7 @@ collect_args (cpp_reader *pfile, const cpp_hashnode *node,
 		    *misra_macro_temp == 'e' && *(misra_macro_temp + 1) == 'n' ||
 		    *misra_macro_temp == 'd' && *(misra_macro_temp + 1) == 'e' && *(misra_macro_temp + 2) == 'f') {
 			//inform(token->src_loc, "Misra-C 20.6\n");
-			cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.6\n");
+			cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.6\n");
 			//SYNTAX_WARNING_AT(node->value.macro->line, "The macro is define in here\n");
 		}  
 	}
@@ -1872,7 +1873,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
         /* 用 invoc_loc 指在這次宏呼叫的位置（macro 名稱附近） */
         source_location loc = invoc_loc;
         cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-                               "MISRA-C: Rule 7.6");
+                               "MISRA C:2025 Rule 7.6");
       }
   }
   /* === Rule 7.6 檢查結束，以下維持原本 Rule 7.5 的檢查 === */
@@ -1888,7 +1889,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
         {
           source_location loc = arg->first[0]->src_loc;
           cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-                    "MISRA-C: Rule 7.5");
+                    "MISRA C:2025 Rule 7.5");
       }
 
       return;
@@ -1900,7 +1901,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
     {
       source_location loc = tok->src_loc;
       cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-                             "MISRA-C: Rule 7.5");
+                             "MISRA C:2025 Rule 7.5");
       return;
     }
 
@@ -1928,10 +1929,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
     {
       source_location loc = tok->src_loc;
       cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
-                             "MISRA-C rule 7.5: value \"%s\" is outside the "
-                             "range of %s%u-bit type implied by \"%s\"",
-                             NODE_NAME (node), is_unsigned ? "unsigned " : "",
-                             bits, name);
+                             "MISRA C:2025 Rule 7.5");
 
     }
 }
@@ -3471,12 +3469,12 @@ create_iso_definition (cpp_reader *pfile, cpp_macro *macro)
       if (macro->count > 1 && token[-1].type == CPP_HASH && macro->fun_like)
 	{
           if (token->type == CPP_MACRO_ARG && CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
-		cpp_warning (pfile, CPP_W_NONE, "Misra-C Rule 20.10\n");
-		//SYNTAX_WARNING_AT(token[-1].src_loc, "Misra-C Rule 20.10\n");
+		cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.10\n");
+		//SYNTAX_WARNING_AT(token[-1].src_loc, "MISRA C:2025 Rule 20.10\n");
 		misra_macro_20_11 = (unsigned char *)pfile->buffer->cur;
 		while (*misra_macro_20_11) {
 			if (*misra_macro_20_11 == '#' && *(misra_macro_20_11 + 1) && *(misra_macro_20_11 + 1) == '#') {
-				cpp_warning (pfile, CPP_W_NONE, "Misra-C Rule 20.11\n");
+				cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.11\n");
 			} else if (*misra_macro_20_11 == '\n') {
 				break;
 			}
@@ -3627,9 +3625,7 @@ _cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
         hash_value=hash_value_compute(var_name);
         if(hash_search_macro(var_name,hash_value)==1)
 		//fprintf(stderr,"macro declaration %s fail. Rule 5.4 violation\n",(char *)NODE_NAME(node));
-		cpp_warning (pfile,CPP_W_NONE,"\n==========================Misra-c 2012 rule violation:5.4==========================\n",\
-					"Rule 5.4:  Macro identifier s shall be distinct\n"\
-					"Category:  Required\n");
+		cpp_warning (pfile,CPP_W_NONE,"MISRA C:2025 Rule 5.4\n");
   }
     // if(cpp_sys_macro_p(pfile))
 		//  fprintf(stderr,"%s\n",NODE_NAME(node));

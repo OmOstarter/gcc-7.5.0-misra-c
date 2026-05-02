@@ -2001,7 +2001,7 @@ maybe_warn_unused_local_typedefs (void)
 	  	inform(input_location, "Misra-C Rule 12.4\n");
 	  warning_at (DECL_SOURCE_LOCATION (decl),
 		      OPT_Wunused_local_typedefs,
-		      "\n==========================Misra-c 2012 rule violation:2.3==========================\nRule 2.3 A project should not contain unused type declarations\nCategory: Advisory\ntypedef %qD locally defined but not used", decl);
+		      "MISRA C:2025 Rule 2.3\ntypedef %qD locally defined but not used", decl);
         }
 	unused_local_typedefs_warn_count = errorcount;
     }
