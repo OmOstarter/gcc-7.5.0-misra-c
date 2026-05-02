@@ -1240,7 +1240,7 @@ unsafe_conversion_p (location_t loc, tree type, tree expr, bool produce_warns)
   /*
   if (TREE_CODE (expr_type) != type->base.code) {
 	//fprintf(stderr, "warning\n");
-	inform(loc, "Misra-C Rule 10.1\n");
+	inform(loc, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
   }
   */
   if (TREE_CODE (expr) == REAL_CST || TREE_CODE (expr) == INTEGER_CST)
@@ -1417,7 +1417,7 @@ unsafe_conversion_p (location_t loc, tree type, tree expr, bool produce_warns)
 	  /* Warn for integer types converted to smaller integer types.  */
 	  /*
 	  if (type->type_common.precision > expr_type->type_common.precision && OPT_Wmisra_c) {
-		inform(loc, "Misra-C Rule 10.6\n");
+		inform(loc, "[MISRA C:2025 Rule 10.6] the value of a composite expression shall not be assigned to an object with a wider essential type\n");
 	  }
 	  */
 	  if (TYPE_PRECISION (type) < TYPE_PRECISION (expr_type)) {
@@ -1429,7 +1429,7 @@ unsafe_conversion_p (location_t loc, tree type, tree expr, bool produce_warns)
                     && TYPE_UNSIGNED (expr_type) != TYPE_UNSIGNED (type))
                     || (TYPE_UNSIGNED (type) && !TYPE_UNSIGNED (expr_type)))
                    && produce_warns && OPT_Wmisra_c) {
-	  	inform(loc, "Misra-C Rule 10.7\n");
+	  	inform(loc, "[MISRA C:2025 Rule 10.7] if a composite expression is used as an operand, the other operand shall not be of a wider type\n");
 	  }
 	  /* When they are the same width but different signedness,
 	     then the value may change.  */
@@ -1498,7 +1498,7 @@ unsafe_conversion_p (location_t loc, tree type, tree expr, bool produce_warns)
                     && TYPE_UNSIGNED (to_type) != TYPE_UNSIGNED (from_type))
                     || (TYPE_UNSIGNED (to_type) && !TYPE_UNSIGNED (from_type)))
                     && produce_warns) && OPT_Wmisra_c)	{
-			inform(loc, "Misra-C Rule 10.6\n");
+			inform(loc, "[MISRA C:2025 Rule 10.6] the value of a composite expression shall not be assigned to an object with a wider essential type\n");
 		}
 	      /* Check for different signedness, see case for real-domain
 		 integers (above) for a more detailed comment.  */
@@ -5210,7 +5210,7 @@ check_user_alignment (const_tree align, bool allow_zero)
   if (TREE_CODE (align) == INTEGER_CST) {
     unsigned HOST_WIDE_INT value = tree_to_uhwi (align);
     if (value == 0) {
-        warning_at (input_location, 0, "MISRA-C rule 8.16");
+        warning_at (input_location, OPT_Wmisra_c, "[MISRA C:2025 Rule 8.16] the alignment specification of an object type shall be a power of two");
     }
 }
   if (error_operand_p (align))

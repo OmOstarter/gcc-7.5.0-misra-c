@@ -1991,7 +1991,7 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
                     C_DTR_NORMAL, &dummy);
       if (specs->storage_class == csc_extern && misra_extern_8_11 && Wmisra_c_trigger) {
 	  misra_extern_8_11 = 0;
-	  inform(misra_extern_8_11_location, "Misra-C Rule 8.11\n");
+	  inform(misra_extern_8_11_location, "[MISRA C:2025 Rule 8.11] when an array with external linkage is declared, its size should be explicitly stated\n");
 	  inform(here, "Use extern modification\n");
       }
       if (declarator == NULL)
@@ -2122,7 +2122,7 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
 	  
 	  if (Wmisra_c_trigger && d->typed.type->base.code == INTEGER_TYPE) {
 		if (d->typed.type->base.u.bits.unsigned_flag && misra_check_rule_7_2) {
-			inform(init_loc, "Misra-c Rule 7.2\n");
+			inform(init_loc, "[MISRA C:2025 Rule 7.2] a suffix shall be applied to all integer constants not of type int\n");
 			misra_check_rule_7_2 = 0;
 		}
 	  }
@@ -2135,24 +2135,16 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok,
           if (TREE_CODE (d) == PARM_DECL)
             flag_sanitize = 0;
           init = c_parser_initializer (parser);
-          if(trigger_9_3 == 1 && init_loc){
-            inform(init_loc,"\n==========================Misra-c 2012 rule violation:9.3==========================\n"
-                    "Rule 9.3:Arrays shall not be partially initialized\n"
-                    "Caategory: Required\n");
+          if(trigger_9_3 == 1 && init_loc && Wmisra_c_trigger){
+            inform(init_loc,"[MISRA C:2025 Rule 9.3] arrays shall not be partially initialized\n");
             trigger_9_3 = 0;
             }
-          if(trigger_9_5 == 1 && init_loc){
-            inform(init_loc,"\n==========================Misra-c 2012 rule violation:9.5==========================\n"
-                "Rule 9.5:Where designated initializers are used to initialize an array object the size of the array"
-                "shall be specied explicitly\n"
-                "Category: Required\n");
+          if(trigger_9_5 == 1 && init_loc && Wmisra_c_trigger){
+            inform(init_loc,"[MISRA C:2025 Rule 9.5] when designated initializers are used the array size shall be specified explicitly\n");
             trigger_9_5 = 0;
             }
-          if(trigger_18_7 == 1 && init_loc){
-            inform(init_loc,"\n==========================Misra-c 2012 rule violation:18.7==========================\n"
-                "Rule 18.7: Flexible array members shall not be declared"
-                "shall be specied explicitly\n"
-                "Category: Required\n");
+          if(trigger_18_7 == 1 && init_loc && Wmisra_c_trigger){
+            inform(init_loc,"[MISRA C:2025 Rule 18.7] flexible array members shall not be declared\n");
             trigger_18_7 = 0;
             }
           flag_sanitize = flag_sanitize_save;
@@ -2773,9 +2765,7 @@ c_parser_declspecs (c_parser *parser, struct c_declspecs *specs,
     case RID_STRUCT:
     case RID_UNION:
     if(Wmisra_c_trigger && c_parser_peek_token (parser)->keyword == RID_UNION)
-    inform(c_parser_peek_token (parser)->location,"\n==========================Misra-c 2012 rule violation:19.2==========================\n"
-                "Rule 19.2:The union keyword should not be used\n"
-                "Category: Advisory\n");
+    inform(c_parser_peek_token (parser)->location,"[MISRA C:2025 Rule 19.2] the union keyword should not be used\n");
       if (!typespec_ok)
         goto out;
       attrs_ok = true;
@@ -3026,8 +3016,8 @@ c_parser_enum_specifier (c_parser *parser)
                 temp = *misra_enum_array_08_12;
                 continue;
           } else if (temp == *(misra_enum_array_08_12 + i)) {
-                inform(misra_enum_array_08_12[i + 1], "Misra-C Rule 8.12\n");
-		inform(misra_enum_array_08_12[i - 1], "Misra-C Rule 8.12, replicates implicit location\n");
+                inform(misra_enum_array_08_12[i + 1], "[MISRA C:2025 Rule 8.12] implicitly-specified enumeration constants shall be unique\n");
+		inform(misra_enum_array_08_12[i - 1], "[MISRA C:2025 Rule 8.12] implicitly-specified enumeration constants shall be unique (implicit location)\n");
           }
 	  temp = *(misra_enum_array_08_12 + i);
       }
@@ -3042,7 +3032,7 @@ c_parser_enum_specifier (c_parser *parser)
 		temp = *misra_enum_array_08_12;
 		continue;
 	  } else if (temp == *(misra_enum_array_08_12 + i)) {
-		inform(misra_enum_array_08_12[i + 1], "Misra-C Rule 8.12\n");
+		inform(misra_enum_array_08_12[i + 1], "[MISRA C:2025 Rule 8.12] implicitly-specified enumeration constants shall be unique\n");
 	  }
       }
       */
@@ -3806,7 +3796,7 @@ c_parser_direct_declarator_inner (c_parser *parser, bool id_present,
       if (parser->tokens->type != CPP_NUMBER && parser->tokens->type == CPP_CLOSE_SQUARE && Wmisra_c_trigger) {
 	  misra_extern_8_11 = 1;
 	  misra_extern_8_11_location = parser->tokens->location;
-	  //inform(parser->tokens->location, "Misra-C Rule 8.11\n");
+	  //inform(parser->tokens->location, "[MISRA C:2025 Rule 8.11] when an array with external linkage is declared, its size should be explicitly stated\n");
       }
       static_seen = c_parser_next_token_is_keyword (parser, RID_STATIC);
       if (static_seen)
@@ -5590,9 +5580,7 @@ c_parser_statement_after_labels (c_parser *parser, bool *if_p,
       inform(loc, "RID_GOTO");
       if(Wmisra_c_trigger)
         {
-            inform(loc,"\n==========================Misra-c 2012 rule violation:15.1==========================\n"
-            "Rule 15.1:The goto statement should not be used\n"
-            "Category: Advisory\n");
+            inform(loc,"[MISRA C:2025 Rule 15.1] the goto statement should not be used\n");
         }
 
       c_parser_consume_token (parser);
@@ -5646,11 +5634,9 @@ c_parser_statement_after_labels (c_parser *parser, bool *if_p,
       if(Wcontrolflow)
       inform(loc, "RID_RETURN");
     return_is_used = return_is_used + 1;
-      if(return_is_used > 1 || in_if_block)
+      if((return_is_used > 1 || in_if_block) && Wmisra_c_trigger)
       {
-        inform(loc,"\n==========================Misra-c 2012 rule violation:15.5==========================\n"
-                "A function should have a single point of exit at the end\n"
-                "Category: Advisory\n");
+        inform(loc,"[MISRA C:2025 Rule 15.5] a function should have a single point of exit at the end\n");
         return_is_used = 0;
       }
       c_parser_consume_token (parser);
@@ -5889,7 +5875,7 @@ c_parser_if_body (c_parser *parser, bool *if_p,
   
   // check MISRA-C Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE && Wmisra_c_trigger) {
-        inform(parser->tokens->location,"Misra-C 15.6\n");
+        inform(parser->tokens->location,"[MISRA C:2025 Rule 15.6] the body of an iteration-statement or selection-statement shall be a compound statement\n");
   }
 //printf("c_parser_if_body\n");/////
   c_parser_all_labels (parser);
@@ -5946,7 +5932,7 @@ c_parser_else_body (c_parser *parser, const token_indent_info &else_tinfo,
     {
       // check MISRA-C 15.6 else {} or just else
       if (Wmisra_c_trigger) {
-          inform(body_loc, "Misra-C 15.6\n");   
+          inform(body_loc, "[MISRA C:2025 Rule 15.6] the body of an iteration-statement or selection-statement shall be a compound statement\n");   
       }
       location_t loc = c_parser_peek_token (parser)->location;
       warning_at (loc,
@@ -6038,7 +6024,7 @@ c_parser_if_statement (c_parser *parser, bool *if_p, vec<tree> *chain)
   cond = c_parser_paren_condition (parser);
   if (misra_14_4 != 10 && !misra_14_4_bool_type) {
         if (Wmisra_c_trigger) {
-            inform(loc, "Misra-C 14.4\n");
+            inform(loc, "[MISRA C:2025 Rule 14.4] the controlling expression of an if or iteration statement shall be essentially Boolean\n");
         }
   }
   misra_14_4 = 0;
@@ -6050,9 +6036,7 @@ c_parser_if_statement (c_parser *parser, bool *if_p, vec<tree> *chain)
     for(i=0;i<len;i++)
         if(TREE_CODE(TREE_OPERAND(cond,i))==MODIFY_EXPR&&loc)
             {
-                inform(loc,"\n==========================Misra-c 2012 rule violation:13.4==========================\n"
-                "Rule 13.4:The result of an assignment operator should not be used\n"
-                "Category: Advisory\n");
+                inform(loc,"[MISRA C:2025 Rule 13.4] the result of an assignment operator should not be used\n");
              }  
   }
 
@@ -6113,9 +6097,7 @@ c_parser_if_statement (c_parser *parser, bool *if_p, vec<tree> *chain)
       second_body = NULL_TREE;
     if(Wmisra_c_trigger ==1){
         if(second_body == NULL_TREE&&else_body == 1) {
-                inform(loc,"\n==========================Misra-c 2012 rule violation:15.7==========================\n"
-                "Rule 15.7:All if ... else if constructs shall be terminated with an else statement\n"
-                "Category: Required\n");
+                inform(loc,"[MISRA C:2025 Rule 15.7] all if...else if constructs shall be terminated with an else statement\n");
         }
     }
 
@@ -6202,14 +6184,14 @@ c_parser_switch_statement (c_parser *parser, bool *if_p)
 		if (misra_array_16_5[i] == 2 && !i || misra_array_16_5[i] == 2 && i == misra_index_16_5 - 2) {
 			break;
 		} else if (misra_array_16_5[i] == 2) {
-			inform(misra_array_16_5[i + 1], "Misra-C Rule 16.5\n");
+			inform(misra_array_16_5[i + 1], "[MISRA C:2025 Rule 16.5] a default label shall appear as either the first or the last switch label\n");
 			inform(switch_loc, "The switch is declaration in here\n");
 			break;
 		} 
 	}
 	
 	if (misra_index_16_5 < 4) {
-		inform(misra_array_16_5[misra_index_16_5 - 1], "Misra-C Rule 16.6\n");
+		inform(misra_array_16_5[misra_index_16_5 - 1], "[MISRA C:2025 Rule 16.6] every switch statement shall have at least two switch-clauses\n");
 		inform(switch_loc, "The switch is declaration in here\n");
 	}
 	for (int i = 0; i < misra_index_16_5; i++) {
@@ -6218,7 +6200,7 @@ c_parser_switch_statement (c_parser *parser, bool *if_p)
 	misra_index_16_5 = 0;
   }
   if (!misra_default_16_4 && Wmisra_c_trigger) {
-	inform(parser->tokens->location, "Misra-C Rule 16.4\n");
+	inform(parser->tokens->location, "[MISRA C:2025 Rule 16.4] every switch statement shall have a default label\n");
 	inform(switch_loc, "The switch is declaration in here\n");	
   }
   misra_default_16_4 = 0;
@@ -6262,7 +6244,7 @@ c_parser_while_statement (c_parser *parser, bool ivdep, bool *if_p)
   cond = c_parser_paren_condition (parser);
   if (misra_14_4 != 10 && !misra_14_4_bool_type) {
     if (Wmisra_c_trigger) {
-        inform(loc, "Misra-C 14.4\n");
+        inform(loc, "[MISRA C:2025 Rule 14.4] the controlling expression of an if or iteration statement shall be essentially Boolean\n");
     }
   }
   misra_14_4 = 0;
@@ -6284,7 +6266,7 @@ c_parser_while_statement (c_parser *parser, bool ivdep, bool *if_p)
     = get_token_indent_info (c_parser_peek_token (parser));
   // check MISRA-C Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE && Wmisra_c_trigger) {
-    inform(parser->tokens->location,"Misra-C 15.6\n");
+    inform(parser->tokens->location,"[MISRA C:2025 Rule 15.6] the body of an iteration-statement or selection-statement shall be a compound statement\n");
   }
   body = c_parser_c99_block_statement (parser, if_p);
   c_finish_loop (loc, cond, NULL, body, c_break_label, c_cont_label, true);
@@ -6294,8 +6276,8 @@ c_parser_while_statement (c_parser *parser, bool ivdep, bool *if_p)
   token_indent_info next_tinfo
     = get_token_indent_info (c_parser_peek_token (parser));
   warn_for_misleading_indentation (while_tinfo, body_tinfo, next_tinfo);
-  if (misra_15_4 > 1) {
-        inform(loc, "Misra-C Rule 15.4\n");
+  if (misra_15_4 > 1 && Wmisra_c_trigger) {
+        inform(loc, "[MISRA C:2025 Rule 15.4] there should be no more than one break or goto to terminate any iteration statement\n");
         //misra_15_4 = 0;
   }
   misra_15_4 = 0;
@@ -6323,7 +6305,7 @@ c_parser_do_statement (c_parser *parser, bool ivdep)
   // check do while for MISRA-C Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE) {
     if (Wmisra_c_trigger) {
-        inform(parser->tokens->location, "Misra-C 15.6\n");
+        inform(parser->tokens->location, "[MISRA C:2025 Rule 15.6] the body of an iteration-statement or selection-statement shall be a compound statement\n");
     }
   }
   block = c_begin_compound_stmt (flag_isoc99);
@@ -6341,7 +6323,7 @@ c_parser_do_statement (c_parser *parser, bool ivdep)
   cond = c_parser_paren_condition (parser);
   if (misra_14_4 != 10 && !misra_14_4_bool_type) {
         if (Wmisra_c_trigger) {
-            inform(loc, "Misra-C 14.4\n");
+            inform(loc, "[MISRA C:2025 Rule 14.4] the controlling expression of an if or iteration statement shall be essentially Boolean\n");
         }
   }
   misra_14_4 = 0;
@@ -6554,7 +6536,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
           // check MISRA-C Rule 14.4 for for statement
           if (misra_14_4 != 10 && !misra_14_4_bool_type) {
             if (Wmisra_c_trigger) {
-                    inform(loc, "Misra-C 14.4\n");
+                    inform(loc, "[MISRA C:2025 Rule 14.4] the controlling expression of an if or iteration statement shall be essentially Boolean\n");
             }
           }
           misra_14_4 = 0;
@@ -6564,7 +6546,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
 	  // check MISRA-C Rule 14.4 for for statement
           if (misra_14_4 != 10 && !misra_14_4_bool_type) {
             if (Wmisra_c_trigger) {
-                    inform(loc, "Misra-C 14.4\n");
+                    inform(loc, "[MISRA C:2025 Rule 14.4] the controlling expression of an if or iteration statement shall be essentially Boolean\n");
             }
           }
           misra_14_4 = 0;
@@ -6619,7 +6601,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
   // check MISRA-C Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE) {
     if (Wmisra_c_trigger) {
-        inform(parser->tokens->location, "Misra-C 15.6\n");
+        inform(parser->tokens->location, "[MISRA C:2025 Rule 15.6] the body of an iteration-statement or selection-statement shall be a compound statement\n");
     }
   }
   body = c_parser_c99_block_statement (parser, if_p);
@@ -6635,8 +6617,8 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
     = get_token_indent_info (c_parser_peek_token (parser));
   warn_for_misleading_indentation (for_tinfo, body_tinfo, next_tinfo);
   
-  if (misra_15_4 > 1) {
-        inform(loc, "Misra-C Rule 15.4\n");
+  if (misra_15_4 > 1 && Wmisra_c_trigger) {
+        inform(loc, "[MISRA C:2025 Rule 15.4] there should be no more than one break or goto to terminate any iteration statement\n");
         misra_15_4 = 0;
   }
   c_break_label = save_break;
@@ -7065,7 +7047,7 @@ c_parser_expr_no_commas (c_parser *parser, struct c_expr *after,
     //debug_tree(rhs.value);//      ++a++
   if (rhs.value->base.code == COND_EXPR) {
     if (misra_12_1_location && Wmisra_c_trigger) {
-        inform(misra_12_1_location, "Misra-C 12.1\n");
+        inform(misra_12_1_location, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
     }
   }
   ret.value = build_modify_expr (op_location, lhs.value, lhs.original_type,
@@ -7084,9 +7066,7 @@ c_parser_expr_no_commas (c_parser *parser, struct c_expr *after,
   ret.original_type = NULL;
     if(check_subtree_modify_expr(ret.value)&&Wmisra_c_trigger)                          //13.4
       {
-        inform(loc13_4,"\n==========================Misra-c 2012 rule violation:13.4==========================\n"
-        "Rule 13.4:The result of an assignment operator should not be used\n"
-        "Category: Advisory\n");
+        inform(loc13_4,"[MISRA C:2025 Rule 13.4] the result of an assignment operator should not be used\n");
       }
     
     //printf("\nret:\n");
@@ -7127,9 +7107,9 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
   cond = c_parser_binary_expression (parser, after, omp_atomic_lhs);
   if (misra_18_4 && Wmisra_c_trigger) {
       if (cond.value->typed.type->base.code == POINTER_TYPE) {
-          inform(misra_location, "Misra-C 18.4\n");
+          inform(misra_location, "[MISRA C:2025 Rule 18.4] the +, -, += and -= operators should not be applied to an expression of pointer type\n");
       }
-      //inform(parser->tokens->location, "Misra-C 18.4\n");
+      //inform(parser->tokens->location, "[MISRA C:2025 Rule 18.4] the +, -, += and -= operators should not be applied to an expression of pointer type\n");
       misra_18_4 = 0;
   }
   if (c_parser_next_token_is_not (parser, CPP_QUERY))
@@ -7155,7 +7135,7 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
         }
         if (misra_tmp_token->type == CPP_MINUS || misra_tmp_token->type == CPP_PLUS) {
             if (!misra_paren) {
-                inform(cond_loc, "Misra-C: 12.1\n");
+                inform(cond_loc, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
             }
         }
         //c_lex_one_token (misra_tmp_parser, &misra_tmp_parser->tokens[0]);
@@ -7170,7 +7150,7 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
                 }
                 if (misra_tmp_token->type == CPP_MINUS || misra_tmp_token->type == CPP_PLUS) {
                         if (!misra_paren) {
-                                inform(cond_loc, "Misra-C: 12.1\n");
+                                inform(cond_loc, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
                         }
                 }
         //c_lex_one_token (misra_tmp_parser, &misra_tmp_parser->tokens[0]);
@@ -7183,7 +7163,7 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
   c_parser_consume_token (parser);
   /*
   if (TREE_CODE(cond.value) == COMPOUND_EXPR || TREE_CODE(cond.value) == COMPLEX_EXPR) {
-    inform(cond_loc, "Misra-C 12.1\n");
+    inform(cond_loc, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
   }
   */
   if (c_parser_next_token_is (parser, CPP_COLON))
@@ -7200,8 +7180,8 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
     }
       tree e = cond.value;
     //debug_tree(e);
-      if (TREE_CODE (e) == COMPOUND_EXPR || TREE_CODE(e) == COMPLEX_EXPR) {
-          inform(cond_loc, "Misra-C 12.1\n");   
+      if ((TREE_CODE (e) == COMPOUND_EXPR || TREE_CODE(e) == COMPLEX_EXPR) && Wmisra_c_trigger) {
+          inform(cond_loc, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
       }
       while (TREE_CODE (e) == COMPOUND_EXPR)
     e = TREE_OPERAND (e, 1);
@@ -7251,7 +7231,7 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
     exp2.value->base.code == GT_EXPR || exp2.value->base.code == GE_EXPR || exp2.value->base.code == EQ_EXPR ||
     exp2.value->base.code == NE_EXPR) {
     if (!misra_paren && Wmisra_c_trigger) {
-        inform(exp2_loc, "Misra-C Rule 12.1\n");
+        inform(exp2_loc, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
         misra_paren--;
     }
     }
@@ -7265,7 +7245,7 @@ c_parser_conditional_expression (c_parser *parser, struct c_expr *after,
   ret.original_code = ERROR_MARK;
   if (Wmisra_c_trigger && cond.original_type != NULL) {
 	if (cond.original_type->base.code != BOOLEAN_TYPE) {
-		inform(start, "Misra-C Rule 10.1\n");
+		inform(start, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
 	}
   }
   if (exp1.value == error_mark_node || exp2.value == error_mark_node)
@@ -7437,7 +7417,7 @@ c_parser_binary_expression (c_parser *parser, struct c_expr *after,
   /*
   if (stack[0].expr.value->base.code == POSTINCREMENT_EXPR) {
 	if (stack[0].expr.value->typed.type->base.code == BOOLEAN_TYPE) {
-		inform(stack[0].loc, "Misra-C Rule 10.1 Rationale 3\n");
+		inform(stack[0].loc, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
 	}
   }
   */
@@ -7650,7 +7630,7 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
     if (Wmisra_c_trigger) {
 	if (expr.original_type) {
 		if (type_name->specs->type->base.code != expr.original_type->base.code) 
-			inform(cast_loc, "Misra-C Rule 10.5\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 	} else {
     		if (type_name->specs->type->base.code != expr.value->typed.type->base.code) {
 			if (type_name->specs->type->base.code == BOOLEAN_TYPE && 
@@ -7658,7 +7638,7 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
 	    			(*((*(struct tree_int_cst *)expr.value).val) == 0 || (*(struct tree_int_cst *)expr.value).val[0] == 1)) {
 					;
 			} else {
-				inform(cast_loc, "Misra-C Rule 10.5\n");
+				inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 			}
     		}
 	}
@@ -7668,25 +7648,25 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
 	if (expr.original_type) {
 		if (type_name->specs->type->base.code == INTEGER_TYPE && type_name->specs->typespec_word == cts_char) { // cast to (char) 
                         if (expr.original_type->base.code == BOOLEAN_TYPE || expr.original_type->base.code == REAL_TYPE) {
-				inform(cast_loc, "Misra-C Rule 10.5\n");
+				inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 			}
 		} else if (type_name->specs->type->base.code == BOOLEAN_TYPE && expr.original_type->base.code != BOOLEAN_TYPE) {
-			inform(cast_loc, "Misra-C Rule 10.5\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 		} else if (type_name->specs->type->base.code == ENUMERAL_TYPE && expr.original_type->base.code != ENUMERAL_TYPE) {
-			inform(cast_loc, "Misra-C Rule 10.5\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 		} else if (type_name->specs->type->base.code == INTEGER_TYPE && expr.original_type->base.code == BOOLEAN_TYPE) {
-			inform(cast_loc, "Misra-C Rule 10.5\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 		} else if (type_name->specs->type->base.code == REAL_TYPE || type_name->specs->typespec_word == cts_float) {
 			if (expr.original_type->base.code == ENUMERAL_TYPE) {
-				inform(cast_loc, "Misra-C Rule 10.5\n");
+				inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 			} 
 		} else if (type_name->specs->type->base.code != expr.original_type->base.code && type_name->specs->type->base.code != INTEGER_TYPE && type_name->specs->typespec_word != cts_void) {
-			inform(cast_loc, "Misra-C Rule 10.5\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 		}
 	} else {
 		if (type_name->specs->type->base.code == INTEGER_TYPE && type_name->specs->typespec_word == cts_char) {
 			if (expr.value->typed.type->base.code == BOOLEAN_TYPE || expr.value->typed.type->base.code == REAL_TYPE) {
-				inform(cast_loc, "Misra-C Rule 10.5\n");
+				inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 			}
 		} else if (type_name->specs->type->base.code != expr.value->typed.type->base.code) {
                         if (type_name->specs->type->base.code == BOOLEAN_TYPE && 
@@ -7694,12 +7674,12 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
                                 (*((*(struct tree_int_cst *)expr.value).val) == 0 || (*(struct tree_int_cst *)expr.value).val[0] == 1)) {
                                         ;
                         } else if (type_name->specs->type->base.code == INTEGER_TYPE && expr.value->typed.type->base.code == BOOLEAN_TYPE) {
-				inform(cast_loc, "Misra-C Rule 10.5\n");
+				inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
                         } else if (type_name->specs->type->base.code != expr.value->base.code && type_name->specs->type->base.code != INTEGER_TYPE && type_name->specs->typespec_word != cts_void) {
-                        inform(cast_loc, "Misra-C Rule 10.5\n");
+                        inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
                 	}	
                 } else if (type_name->specs->type->base.code == ENUMERAL_TYPE && expr.value->typed.type->base.code != ENUMERAL_TYPE) {
-			inform(cast_loc, "Misra-C Rule 10.5\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.5] the value of an expression should not be cast to an inappropriate essential type\n");
 		}
 	}
     }
@@ -7710,14 +7690,14 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
 	}
 	if (expr.original_type) {
 		if (type_name->specs->type->type_common.precision > expr.original_type->type_common.precision && type_name->specs->type->base.code != VOID_TYPE)
-                        inform(cast_loc, "Misra-C Rule 10.8\n");
+                        inform(cast_loc, "[MISRA C:2025 Rule 10.8] the value of a composite expression shall not be cast to a different essential type category or a wider type\n");
 		if (type_name->specs->type->type_common.precision < expr.original_type->type_common.precision && 
 			type_name->specs->type->base.u.bits.unsigned_flag !=  expr.original_type->base.u.bits.unsigned_flag && type_name->specs->type->base.code != VOID_TYPE) {
-			inform(cast_loc, "Misra-C Rule 10.8\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.8] the value of a composite expression shall not be cast to a different essential type category or a wider type\n");
 		}
 	} else {
 		if (type_name->specs->type->type_common.precision > expr.value->typed.type->type_common.precision && type_name->specs->type->base.code != VOID_TYPE) {
-			inform(cast_loc, "Misra-C Rule 10.8\n");
+			inform(cast_loc, "[MISRA C:2025 Rule 10.8] the value of a composite expression shall not be cast to a different essential type category or a wider type\n");
 			
 		}
                 if (type_name->specs->type->type_common.precision < expr.value->typed.type->type_common.precision && 
@@ -7725,7 +7705,7 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
 			if (type_name->specs->type->base.code == BOOLEAN_TYPE && (*((*(struct tree_int_cst *)expr.value).val) == 0 || *((*(struct tree_int_cst *)expr.value).val) == 1)) {
 				;
 			} else {
-                        	inform(cast_loc, "Misra-C Rule 10.8\n");
+                        	inform(cast_loc, "[MISRA C:2025 Rule 10.8] the value of a composite expression shall not be cast to a different essential type category or a wider type\n");
 			}
 		}
 	}
@@ -7817,7 +7797,7 @@ c_parser_unary_expression (c_parser *parser)
             c_parser_peek_token(misra_tmp_parser)->type == CPP_AND_EQ || c_parser_peek_token(misra_tmp_parser)->type == CPP_OR_EQ ||
             c_parser_peek_token(misra_tmp_parser)->type == CPP_XOR_EQ || c_parser_peek_token(misra_tmp_parser)->type == CPP_RSHIFT_EQ ||
             c_parser_peek_token(misra_tmp_parser)->type == CPP_LSHIFT_EQ && Wmisra_c_trigger) {
-            inform(op_loc, "Misra 12.1\n");
+            inform(op_loc, "[MISRA C:2025 Rule 12.1] the precedence of operators within expressions should be made explicit\n");
             break;
         }
         c_parser_consume_token(misra_tmp_parser);
@@ -8549,7 +8529,7 @@ misra_check_generic_rule236 (location_t generic_loc,
   if (et_ctrl != et_std)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.6");
+                  "[MISRA C:2025 Rule 23.6] the type of the controlling expression and the generic association type shall have the same essential type category");
     }
 }
 
@@ -8709,7 +8689,7 @@ misra_check_generic_rule237 (location_t generic_loc,
   if (used_count > 0 && unused_count > 0)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.7");
+                  "[MISRA C:2025 Rule 23.7] all generic associations in a _Generic selection shall be used");
     }
 }
 
@@ -8746,7 +8726,7 @@ c_parser_generic_selection (c_parser *parser)
       /* GCC 7 可用：from_macro_expansion_at(loc) */
       if (!from_macro_expansion_at (generic_loc))
         warning_at (generic_loc, 0,
-                    "MISRA-C: Rule 23.1");
+                    "[MISRA C:2025 Rule 23.1] operands of the _Generic keyword shall not be compatible types");
     }
 
   c_parser_consume_token (parser);
@@ -8781,7 +8761,7 @@ c_parser_generic_selection (c_parser *parser)
         if (control_t && misra_expr_has_potential_side_effects (control_t))
           {
             warning_at (control_loc, 0,
-              "MISRA-C: Rule 23.2");
+              "[MISRA C:2025 Rule 23.2] the result of a _Generic expression shall be used");
           }
       }
   }
@@ -8858,7 +8838,7 @@ c_parser_generic_selection (c_parser *parser)
           const char *why = misra234_reason (assoc.type);
           if (!why) why = "non-selectable type";
           warning_at (assoc.type_location, 0,
-                      "MISRA-C: Rule 23.4");
+                      "[MISRA C:2025 Rule 23.4] a _Generic selection shall not have a function or array type as a generic association");
         }
       /* === end MISRA-C Rule 23.4 === */
 
@@ -8947,7 +8927,7 @@ c_parser_generic_selection (c_parser *parser)
       && misra238_default_index != misra238_assoc_index)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.8");
+                  "[MISRA C:2025 Rule 23.8] a default generic association shall appear last in a _Generic selection");
       /* 如果你有自己的 misra_* API，就把 warning_at 換成：
          misra_c_viol (MISRA_RULE_23_8, generic_loc, "..."); 之類的 */
     }
@@ -8961,7 +8941,7 @@ c_parser_generic_selection (c_parser *parser)
       && misra233_non_default_count == 0)
     {
       warning_at (generic_loc, 0,
-                  "MISRA-C: Rule 23.3");
+                  "[MISRA C:2025 Rule 23.3] no two _Generic associations shall specify a compatible type");
     }
 
     /* ←─ 到這裡為止 ─→ */
@@ -8996,7 +8976,7 @@ c_parser_generic_selection (c_parser *parser)
                                                       assoc_type))
             {
               warning_at (generic_loc, 0,
-                          "MISRA-C: Rule 23.5");
+                          "[MISRA C:2025 Rule 23.5] the first operand of _Generic shall not be compatible with any generic association type");
               /* 一個 _Generic 只報一次就好 */
               break;
             }
@@ -9190,7 +9170,7 @@ c_parser_postfix_expression (c_parser *parser)
         && !is_call_ctx)
       warning_at (loc,
                   0,   /* 第二參數 0 = 永遠啟用，不需額外 -W 選項 */
-                  "MISRA-C rule 17.12");
+                  "[MISRA C:2025 Rule 17.12] the va_arg macro shall only be invoked for an argument of an appropriate type");
 
     /* 4. consume 並回到原本流程 */
         c_parser_consume_token (parser);
@@ -10172,7 +10152,7 @@ c_parser_expression (c_parser *parser)                              //C_PARS_EXP
   if (c_parser_next_token_is (parser, CPP_COMMA)) {
     expr = convert_lvalue_to_rvalue (tloc, expr, true, false);
     if (misra_for_comma_check && Wmisra_c_trigger)
-	inform(parser->tokens->location, "Misra-C Rule 12.3\n");
+	inform(parser->tokens->location, "[MISRA C:2025 Rule 12.3] the comma operator should not be used\n");
   }
   while (c_parser_next_token_is (parser, CPP_COMMA))
     {

@@ -87,17 +87,11 @@ void hash_search_func(char *key,int value,int level,location_t locus)
 		if(strcmp(HASH_TABLE[value].key,key)==0)
 		{
 			if(HASH_TABLE[value].used_flag==1)
-				inform(locus,"\n==========================Misra-c 2012 rule violation:5.5==========================\n"
-				"Rule 5.5: Identifiers shall be distinct from macro names\n"
-				"Category: Required\n");
+				inform(locus,"[MISRA C:2025 Rule 5.5] identifiers shall be distinct from macro names\n");
 			else if(HASH_TABLE[value].used_flag==level+1)
-				inform(locus,"\n==========================Misra-c 2012 rule violation:5.2==========================\n"
-				"Rule 5.2: Identifier s declared in the same scope and name space shall be distinct\n"
-				"Category: Required\n");
+				inform(locus,"[MISRA C:2025 Rule 5.2] identifiers declared in the same scope shall be distinct\n");
 			else
-				inform(locus,"\n==========================Misra-c 2012 rule violation:5.3==========================\n"
-				"Rule 5.3: An identifier declared in an inner scope shall not hide an identifier declared in an outer scope\n"
-				"Category: Required\n");
+				inform(locus,"[MISRA C:2025 Rule 5.3] an identifier shall not hide an identifier declared in an outer scope\n");
 			return ;
 		}
 		value=value+1;
@@ -201,8 +195,7 @@ misra2213_check_decl (tree decl)
     {
       /* 參數：自動儲存期 → 違規 */
       warning_at (loc, 0,
-        "object of type %qT shall not have automatic storage duration "
-        "(parameter) (MISRA-C: Rule 22.13)", t);
+        "[MISRA C:2025 Rule 22.13] object of type %qT with automatic storage duration shall not be a synchronization object (parameter)", t);
       return;
     }
 
@@ -210,8 +203,7 @@ misra2213_check_decl (tree decl)
   if (DECL_THREAD_LOCAL_P (decl))
     {
       warning_at (loc, 0,
-        "object of type %qT shall not have thread storage duration "
-        "(MISRA-C: Rule 22.13)", t);
+        "[MISRA C:2025 Rule 22.13] object of type %qT with thread storage duration shall not be a synchronization object", t);
       return;
     }
 
@@ -222,8 +214,7 @@ misra2213_check_decl (tree decl)
       if (ctx && (TREE_CODE (ctx) == FUNCTION_DECL || TREE_CODE (ctx) == BLOCK))
         {
           warning_at (loc, 0,
-            "object of type %qT shall not have automatic storage duration "
-            "(MISRA-C: Rule 22.13)", t);
+            "[MISRA C:2025 Rule 22.13] object of type %qT with automatic storage duration shall not be a synchronization object", t);
         }
     }
 }
@@ -388,9 +379,8 @@ misra18_10_check_decl (tree decl)
   tree ty = TREE_TYPE (decl);
   if (misra18_10_is_ptr_to_vla (ty))
     {
-      /* 第 2 個參數給 0 → 不綁定任何 -W 選項 */
-      warning_at (DECL_SOURCE_LOCATION (decl), 0,
-                  "MISRA-C Rule 18.10");
+      warning_at (DECL_SOURCE_LOCATION (decl), OPT_Wmisra_c,
+                  "[MISRA C:2025 Rule 18.10] pointer arithmetic shall not be applied to a pointer to a VLA");
     }
 }
 /* ===== MISRA 18.10 helpers ===== */
@@ -1131,7 +1121,7 @@ update_spot_bindings (struct c_scope *scope, struct c_spot_bindings *p)
       if (Wmisra_c_trigger) {
       	if (scope->bindings && p->scope->bindings) {
 		if (p->scope->bindings->locus) {
-			inform(p->scope->bindings->locus, "Misra 15.3\n");	
+			inform(p->scope->bindings->locus, "[MISRA C:2025 Rule 15.3] goto label shall be declared in the enclosing block\n");	
 		}	
       	}	      
       }
@@ -1359,7 +1349,7 @@ update_label_decls (struct c_scope *scope)
 	      if (Wmisra_c_trigger) {
 		if (label_vars->label_bindings.scope != NULL)
 	      	if (b->depth < label_vars->label_bindings.scope->depth) {
-			inform(DECL_SOURCE_LOCATION(b->decl), "The label is define in here scope is %d against the Misra-C 15.3\n", b->depth);
+			inform(DECL_SOURCE_LOCATION(b->decl), "[MISRA C:2025 Rule 15.3] goto label is declared in scope depth %d, not enclosing block\n", b->depth);
 		        //locate_old_decl(b->decl);	
 		}
 	      }	      
@@ -1484,8 +1474,8 @@ pop_scope (void)
 	  /*
 	  if (Wmisra_c_trigger) {
 	  	if (p != block) {
-			//fprintf(stderr, "Misra-C: 15.3\n");
-			inform(b->locus, "Misra-C: 15.3\n");
+			//fprintf(stderr, "[MISRA C:2025 Rule 15.3] goto label shall be declared in the enclosing block\n");
+			inform(b->locus, "[MISRA C:2025 Rule 15.3] goto label shall be declared in the enclosing block\n");
 	  	}
 	  }
 	  */
@@ -1555,13 +1545,13 @@ pop_scope (void)
 	    {
 	      if (!TREE_USED (p)) {
 		if (Wmisra_c_trigger) {
-			inform(b->locus, "Misra-C Rule 2.2\n");
+			inform(b->locus, "[MISRA C:2025 Rule 2.2] there shall be no dead code\n");
 		}
 		warning (OPT_Wunused_variable, "unused variable %q+D", p);
 	      }
 	      else if (DECL_CONTEXT (p) == current_function_decl) {
 		      if (Wmisra_c_trigger) {
-			inform(b->locus, "Misra-C Rule 2.2\n");
+			inform(b->locus, "[MISRA C:2025 Rule 2.2] there shall be no dead code\n");
 		      }
 		      warning_at (DECL_SOURCE_LOCATION (p),
 			    OPT_Wunused_but_set_variable,
@@ -2364,7 +2354,7 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 	  if (!DECL_IS_BUILTIN (olddecl)
 	      && !DECL_EXTERN_INLINE (olddecl))
 	    {
-	      error ("\n==========================Misra-c 2012 rule violation:8.8==========================\nRule 8.8 The static storage class specifier shall be used in all declarations of objects and functions that have internal linkage\nCategory Required\nstatic declaration of %q+D follows "
+	      error ("[MISRA C:2025 Rule 8.8] static storage class specifier shall be used in all declarations with internal linkage; static declaration of %q+D follows "
 		     "non-static declaration", newdecl);
 	      locate_old_decl (olddecl);
 	    }
@@ -2470,7 +2460,7 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 		error ("non-static declaration of %q+D follows "
 		       "static declaration", newdecl);
 	      else
-		error ("Misra-c Rule 8.8 static declaration of %q+D follows "
+		error ("[MISRA C:2025 Rule 8.8] static declaration of %q+D follows "
 		       "non-static declaration", newdecl);
 
 	      locate_old_decl (olddecl);
@@ -3473,7 +3463,7 @@ implicit_decl_warning (location_t loc, tree id, tree olddecl)
 	     id, hint);
 	}
       else {
-	inform(loc, "Misra 17.3\n");
+	inform(loc, "[MISRA C:2025 Rule 17.3] a function shall not be declared implicitly\n");
 	warned = pedwarn (loc, OPT_Wimplicit_function_declaration,
 			  "implicit declaration of function %qE", id);
       }
@@ -3482,7 +3472,7 @@ implicit_decl_warning (location_t loc, tree id, tree olddecl)
     {
       gcc_rich_location richloc (loc);
       richloc.add_fixit_replace (hint);
-      inform(loc, "Misra 17.3\n");
+      inform(loc, "[MISRA C:2025 Rule 17.3] a function shall not be declared implicitly\n");
       warned = warning_at_rich_loc
 	(&richloc, OPT_Wimplicit_function_declaration,
 	 G_("implicit declaration of function %qE; did you mean %qs?"),
@@ -3708,7 +3698,7 @@ int *p = ggc_alloc<int>();
  // printf("IDENTIFIER_POINTER(DECL_NAME(decl):%s\n",IDENTIFIER_POINTER(DECL_NAME(decl)));
   /*if(strcmp(IDENTIFIER_POINTER(DECL_NAME(decl)),"malloc") ==0)
   {
-     inform(loc,"Misra-c 2012 rule violation:\nRule 21.8: The library functions abort, exit, getenv and system of <stdlib.h> shall not be used\nCategory:  Required\n");
+     inform(loc,"[MISRA C:2025 Rule 21.8] the library functions abort, exit, getenv and system of <stdlib.h> shall not be used\n");
   }*/
   if (decl)
     {
@@ -3986,7 +3976,7 @@ lookup_label_for_goto (location_t loc, tree name)
      useful warnings.  */
   if (DECL_CONTEXT (label) != current_function_decl)
     {
-      inform(loc, "Misra-C 15.3\n");
+      inform(loc, "[MISRA C:2025 Rule 15.3] goto label shall be declared in the enclosing block\n");
       gcc_assert (C_DECLARED_LABEL_FLAG (label));
       return label;
     }
@@ -4016,7 +4006,7 @@ lookup_label_for_goto (location_t loc, tree name)
   FOR_EACH_VEC_SAFE_ELT (label_vars->decls_in_scope, ix, decl)
     warn_about_goto (loc, label, decl);
   if (label_vars->decls_in_scope && Wmisra_c_trigger) {
-	inform(loc, "Misra-15.2\n");
+	inform(loc, "[MISRA C:2025 Rule 15.2] goto shall jump to a label declared later in the same function\n");
   }
   if (label_vars->label_bindings.left_stmt_expr)
     {
@@ -4210,7 +4200,7 @@ c_check_switch_jump_warnings (struct c_spot_bindings *switch_bindings,
   struct c_scope *scope;
   if (current_scope != switch_bindings->scope && Wmisra_c_trigger) {
 	if (current_scope->depth > switch_bindings->scope->depth + 2) {
-		inform(case_loc, "Misra-C Rule 16.2\n");
+		inform(case_loc, "[MISRA C:2025 Rule 16.2] a switch label shall only be used in the body of a switch statement\n");
 	} 
   }
   saw_error = false;
@@ -4865,7 +4855,7 @@ build_array_declarator (location_t loc,
   declarator->declarator = 0;
   declarator->u.array.dimen = expr;
   if (static_p && Wmisra_c_trigger) {
-	inform(loc, "Misra-C 17.6\n");
+	inform(loc, "[MISRA C:2025 Rule 17.5] the static keyword shall not be used between [ ] in an array parameter declaration\n");
   }
   if (quals)
     {
@@ -5062,9 +5052,7 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
 	else if (COMPLETE_TYPE_P (TREE_TYPE (decl)))
 	  {
 		if(TREE_CODE(TYPE_SIZE (TREE_TYPE (decl))) == MULT_EXPR && Wmisra_c_trigger)
-		inform(DECL_SOURCE_LOCATION(decl),"\n==========================Misra-c 2012 rule violation:18.8==========================\n"
-		"Rule 18.8: Variable-length array types shall not be used\n"
-		"Category:  Required\n");
+		inform(DECL_SOURCE_LOCATION(decl),"[MISRA C:2025 Rule 18.8] variable-length array types shall not be used\n");
 	  
 
 	    /* A complete type is ok if size is fixed.  */
@@ -5144,8 +5132,8 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
         {
           tree result_type = TREE_TYPE (fn_type);
           if (TREE_CODE (result_type) != VOID_TYPE)
-            warning_at (DECL_SOURCE_LOCATION (decl), 0,
-                        "MISRA-C rule 17.10");
+            warning_at (DECL_SOURCE_LOCATION (decl), OPT_Wmisra_c,
+                        "[MISRA C:2025 Rule 17.10] a _Noreturn function shall not have a non-void return type");
         }
     }
 
@@ -5176,16 +5164,12 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
 	  if(!ce->u.arg_info->types)
 		//error (" %qD: parameter name omitted (Rule 8.2 violation)\n",decl);
 		if(Wmisra_c_trigger)
-		inform(DECL_SOURCE_LOCATION(decl),"\n==========================Misra-c 2012 rule violation:8.2==========================\n"
-		"Rule 8.2: Function types shall be in prototype form with named parameters\n"
-		"Category: Required\n");
+		inform(DECL_SOURCE_LOCATION(decl),"[MISRA C:2025 Rule 8.2] function types shall be in prototype form with named parameters\n");
 	  for (; args; args = DECL_CHAIN (args))
 	    {
 	      if(!DECL_NAME(args)&&!DECL_IN_SYSTEM_HEADER(args) && Wmisra_c_trigger)
 			//error (" %qD: parameter name omitted (Rule 8.2 violation\n",decl);
-			inform(DECL_SOURCE_LOCATION(decl),"\n==========================Misra-c 2012 rule violation:8.2==========================\n"
-			"Rule 8.2: Function types shall be in prototype form with named parameters\n"
-			"Category: Required\n");
+			inform(DECL_SOURCE_LOCATION(decl),"[MISRA C:2025 Rule 8.2] function types shall be in prototype form with named parameters\n");
 
 	      tree type = TREE_TYPE (args);
 	      if (type && INTEGRAL_TYPE_P (type)
@@ -5285,7 +5269,7 @@ finish_decl (tree decl, location_t init_loc, tree init,
 		misra_18_5_pointer_check = misra_18_5_pointer_check->typed.type;
 	}
 	if (misra_pointer_counter > 2) {
-		inform(((struct tree_decl_minimal *)decl)->locus, "Misra-c Rule 18.5\n");
+		inform(((struct tree_decl_minimal *)decl)->locus, "[MISRA C:2025 Rule 18.5] declarations shall contain no more than two levels of pointer nesting\n");
 	}
 	misra_pointer_counter = 0;
   }
@@ -5850,13 +5834,13 @@ check_bitfield_type_and_width (location_t loc, tree *type, tree *width,
   type_mv = TYPE_MAIN_VARIANT (*type);
   
   if (type_mv != unsigned_type_node) {
-	inform(loc, "Misra-c Rule 6.2 bit fields need unsigned type\n");	
+	inform(loc, "[MISRA C:2025 Rule 6.2] single-bit named bit fields shall not be of a signed type\n");	
   }
   if (type_mv == long_integer_type_node) {
-	inform(loc, "Misra-c Rule 6.1 even if long and int are the same size\n");	
+	inform(loc, "[MISRA C:2025 Rule 6.1] bit fields shall only be declared with an explicitly signed or unsigned integer type\n");	
   }
   if (type_mv == integer_type_node) {
-	inform(loc, "Misra-c Rule 6.1 plain int not permitted\n");
+	inform(loc, "[MISRA C:2025 Rule 6.1] plain int shall not be used for bit field declarations\n");
   }
 
   if (!in_system_header_at (input_location)
@@ -6246,7 +6230,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 		| ENCODE_QUAL_ADDR_SPACE (address_space));
   if (atomicp && TREE_CODE (type) == VOID_TYPE)
   {
-    warning_at (loc, 0, "MISRA-C rule 11.10");
+    warning_at (loc, OPT_Wmisra_c, "MISRA-C rule 11.10");
     atomicp = false;
   }
   
@@ -6326,7 +6310,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
            /* It is fine to have 'extern const' when compiling at C
               and C++ intersection.  */
            if (!(warn_cxx_compat && constp))
-             warning_at (loc, 0, "==========================Misra-c 2012 rule violation:8.4==========================\nRule 8.4 A compatible declaration shall be visible when an object or function with external linkage is defined\nCategory Required\n%qE initialized and declared %<extern%>",
+             warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 8.4] a compatible declaration shall be visible when an object or function with external linkage is defined; %qE initialized and declared %<extern%>",
 		 	 name);
          }
       else
@@ -6860,8 +6844,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 			   "return type");
 		else
 		  warning_at (specs_loc, OPT_Wignored_qualifiers,
-			      "type qualifiers ignored on function "
-			      "return type MISRA-C rule 17.13");
+			      "[MISRA C:2025 Rule 17.13] type qualifiers on a function return type shall not be used");
 
 		/* Ensure an error for restrict on invalid types; the
 		   DR#423 resolution is not entirely clear about
@@ -8502,8 +8485,8 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
         if (DECL_BIT_FIELD (x))
         {
             // 發出警告，提示 bit-field 出現在 union 中
-            warning_at (DECL_SOURCE_LOCATION (x), 0,
-                        "Misra-C Rule 6.3 a bit-field %qE shall not be declared as a member of a union", DECL_NAME (x));
+            warning_at (DECL_SOURCE_LOCATION (x), OPT_Wmisra_c,
+                        "[MISRA C:2025 Rule 6.3] the default argument promotions shall not be applied to a function with a non-prototype declaration; bit field in union");
         } 
     }
   }
@@ -9661,8 +9644,8 @@ store_parm_decls_from (struct c_arg_info *arg_info)
     {
       tree ty = TREE_TYPE (p);
       if (misra18_10_ptr_to_vla_p (ty))
-        warning_at (DECL_SOURCE_LOCATION (p), 0,
-                    "MISRA-C Rule 18.10");
+        warning_at (DECL_SOURCE_LOCATION (p), OPT_Wmisra_c,
+                    "[MISRA C:2025 Rule 18.10] pointer arithmetic shall not be applied to a pointer to a VLA");
     }
 
 }
@@ -9755,8 +9738,8 @@ store_parm_decls (void)
   for (tree p = DECL_ARGUMENTS (current_function_decl); p; p = DECL_CHAIN (p))
     {
       if (misra18_10_ptr_to_vla_p (TREE_TYPE (p)))
-        warning_at (DECL_SOURCE_LOCATION (p), 0,
-                    "MISRA-C Rule 18.10");
+        warning_at (DECL_SOURCE_LOCATION (p), OPT_Wmisra_c,
+                    "[MISRA C:2025 Rule 18.10] pointer arithmetic shall not be applied to a pointer to a VLA");
     }
       /* MISRA-C Rule 22.13 — 參數不得為 thrd_t/mtx_t/cnd_t/tss_t（自動儲存期） */
   {
@@ -10359,7 +10342,7 @@ declspecs_add_qual (source_location loc,
       prev_loc = specs->locations[cdw_restrict];
       specs->locations[cdw_restrict] = loc;
       if (Wmisra_c_trigger) {	
-      	inform(loc, "Misra-C Rule 8.14\n");
+      	inform(loc, "[MISRA C:2025 Rule 8.14] the restrict type qualifier shall not be used\n");
       }
       break;
     case RID_ATOMIC:
@@ -11273,7 +11256,7 @@ declspecs_add_scspec (source_location loc,
       specs->inline_p = true;
       specs->locations[cdw_inline] = loc;
       if (specs->storage_class != csc_static && specs->storage_class == csc_none && Wmisra_c_trigger) {
-	  inform(loc, "Misra-C Rule 8.10\n");	
+	  inform(loc, "[MISRA C:2025 Rule 8.10] an inline function shall be declared with the static storage class\n");	
       }
       break;
     case RID_NORETURN:
@@ -11330,7 +11313,7 @@ declspecs_add_scspec (source_location loc,
       if (specs->inline_p) {
           ;
       } else if (Wmisra_c_trigger) {
-	  inform(loc, "Misra-C Rule 8.10\n");
+	  inform(loc, "[MISRA C:2025 Rule 8.10] an inline function shall be declared with the static storage class\n");
       }
       */
       if (specs->thread_p && specs->thread_gnu_p)
@@ -11402,7 +11385,7 @@ declspecs_add_alignas (source_location loc,
   {
     source_location effective_loc = (loc == 0 ? input_location : loc);
     error_at (effective_loc,
-      "MISRA-C rule 8.17");
+      "[MISRA C:2025 Rule 8.17] the same alignment shall be specified on all declarations of an object or function");
   }
   
   if (align_log > specs->align_log)

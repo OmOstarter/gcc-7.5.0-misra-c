@@ -2241,8 +2241,8 @@ default_function_array_conversion (location_t loc, struct c_expr exp)
   if (TREE_CODE (t) == COMPONENT_REF
       && TREE_CODE (TREE_TYPE (t)) == ARRAY_TYPE
       && !lvalue_p (TREE_OPERAND (t, 0)))
-    warning_at (loc, 0,
-                "MISRA-C Rule 18.9");
+    warning_at (loc, OPT_Wmisra_c,
+                "[MISRA C:2025 Rule 18.9] array subscript on a non-lvalue array");
 
   /* ---------- 以下保留原始程式不動 ---------- */
   tree orig_exp = exp.value;
@@ -2458,7 +2458,7 @@ default_conversion (tree exp)
       if (TREE_CODE (exp) == COMPONENT_REF
           && !lvalue_p (TREE_OPERAND (exp, 0)))
         warning_at (EXPR_LOC_OR_LOC (exp, input_location),
-                    0,
+                    Wmisra_c_trigger,
                     "MISRA 18.9 (array-to-pointer conversion of temporary object)");
 
       /* 保持原有行為：回傳 array 給呼叫端做 decay */
@@ -2734,11 +2734,9 @@ build_component_ref (location_t loc, tree datum, tree component,
       if (TYPE_ATOMIC (type) && c_inhibit_evaluation_warnings == 0)
 	{
 	  if (code == RECORD_TYPE)
-	    warning_at (loc, 0, "accessing a member %qE of an atomic "
-			"structure %qE MISRA-C rule 12.6", component, datum);
+	    warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 12.6] member %qE of an atomic structure %qE shall not be accessed via member operator", component, datum);
 	  else
-	    warning_at (loc, 0, "accessing a member %qE of an atomic "
-			"union %qE MISRA-C rule 12.6", component, datum);
+	    warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 12.6] member %qE of an atomic union %qE shall not be accessed via member operator", component, datum);
 	}
 
       /* Chain the COMPONENT_REFs if necessary down to the FIELD.
@@ -2903,9 +2901,9 @@ build_array_ref (location_t loc, tree array, tree index)
 {
   tree ret;
   bool swapped = false;
-  if (OPT_Wmisra_c) {
+  if (Wmisra_c_trigger) {
     if (index->typed.type->base.code == REAL_TYPE || index->typed.type->base.code == BOOLEAN_TYPE || misra_char_type_check(index->typed.type)) {
-	inform(loc, "Misra-C Rule 10.1\n");
+	inform(loc, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
     }
   }
   if (TREE_TYPE (array) == error_mark_node
@@ -3240,7 +3238,7 @@ c_expr_sizeof_expr (location_t loc, struct c_expr expr)
 	{
 	  inform(DECL_SOURCE_LOCATION (expr.value), "The array function parameter %qE has the same data type as %qT", expr.value, expr.original_type);
 	  if (Wmisra_c_trigger) {
-		inform(loc, "Misra-C Rule 12.5 %<sizeof%> on array function parameter %qE will return size of %qT", expr.value, expr.original_type);
+		inform(loc, "[MISRA C:2025 Rule 12.5] sizeof operator applied to array function parameter %qE will return size of %qT", expr.value, expr.original_type);
 		inform (DECL_SOURCE_LOCATION (expr.value), "declared here");
 	  }
 	  if (warning_at (loc, OPT_Wsizeof_array_argument,
@@ -3497,7 +3495,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
         const char *name = IDENTIFIER_POINTER (DECL_NAME (target));
         if (name && strcmp (name, "system") == 0)
           error_at (loc,
-            "MISRA-C Rule 21.21");
+            "[MISRA C:2025 Rule 21.21] the Standard Library function system of <stdlib.h> shall not be used");
       }
   }
   /* —— MISRA-C Rule 21.24：禁用 rand / srand —— */
@@ -3514,7 +3512,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
       {
         const char *name = IDENTIFIER_POINTER (  DECL_NAME (target));
         if (name && (strcmp (name, "rand") == 0 || strcmp (name, "srand") == 0))
-          warning_at (loc, 0, "MISRA-C: Rule 21.24");
+          warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 21.24] rand and srand shall not be used");
       }
   }
 
@@ -3537,8 +3535,8 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
             && !in_system_header_at (loc)
             && !misra_suppress_for_internal (loc))
           {
-            warning_at (loc, 0,
-                        "MISRA-C: Rule 1.4");
+            warning_at (loc, OPT_Wmisra_c,
+                        "[MISRA C:2025 Rule 1.4] Annex K functions shall not be used");
           }
       }
   }
@@ -3648,8 +3646,8 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
             }
 
             if (!misra_suppress_for_internal (spot)) {
-              warning_at (spot, 0,
-                "MISRA-C: Rule 21.22",
+              warning_at (spot, OPT_Wmisra_c,
+                "[MISRA C:2025 Rule 21.22] mathematical function argument has incorrect type",
                 i + 1, fname);
             }
             break; /* 報一次即可，避免噪音 */
@@ -3710,8 +3708,8 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
                                 spot = eloc;
                             }
 
-                            warning_at (spot, 0,
-                              "MISRA-C: Rule 21.23");
+                            warning_at (spot, OPT_Wmisra_c,
+                              "[MISRA C:2025 Rule 21.23] type-generic function arguments shall have consistent types");
                             break; /* 報一次即可，避免噪音 */
                           }
                       }
@@ -3783,8 +3781,8 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
           auto warn_bad_mo = [&] (int idx) {
             location_t s = spot_for_arg (idx);
             if (!misra_suppress_for_internal (s))
-              warning_at (s, 0,
-                "MISRA-C: Rule 21.25");
+              warning_at (s, OPT_Wmisra_c,
+                "[MISRA C:2025 Rule 21.25] memory synchronization operations shall use memory_order_seq_cst");
           };
 
           bool handled = false;
@@ -3997,8 +3995,8 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
               if (timed == MISRA_TIMED_NO)
                 {
                   location_t wloc = loc; /* 或 EXPR_LOCATION(a0) */
-                  warning_at (wloc, 0,
-                    "MISRA-C: Rule 21.26");
+                  warning_at (wloc, OPT_Wmisra_c,
+                    "[MISRA C:2025 Rule 21.26] mtx_timedlock shall only be used with timed mutexes");
                 }
             }
           /* 查無初始化紀錄：保守不報（避免誤報） */
@@ -4013,17 +4011,17 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
   if (nargs < 0)
     return error_mark_node;
   
-  if (misra_21_15_counter && misra_21_15_tmp[0] == misra_21_15_tmp[2]) {
+  if (misra_21_15_counter && misra_21_15_tmp[0] == misra_21_15_tmp[2] && Wmisra_c_trigger) {
 	if (misra_21_15_tmp[1] != misra_21_15_tmp[3]) {
-		inform(loc, "Misra-C Rule 21.15\n");
-	}	
+		inform(loc, "[MISRA C:2025 Rule 21.15] pointer arguments to memcpy, memmove and memcmp shall have a compatible type\n");
+	}
   }
-  if (misra_21_16_counter && misra_21_16_tmp[0] == misra_21_16_tmp[2]) {
-	if (misra_21_16_tmp[1] == misra_21_16_tmp[3] && misra_21_16_tmp[3]  == RECORD_TYPE || 
+  if (misra_21_16_counter && misra_21_16_tmp[0] == misra_21_16_tmp[2] && Wmisra_c_trigger) {
+	if (misra_21_16_tmp[1] == misra_21_16_tmp[3] && misra_21_16_tmp[3]  == RECORD_TYPE ||
             misra_21_16_tmp[1] == misra_21_16_tmp[3] && misra_21_16_tmp[3] == UNION_TYPE) {
-		inform(loc, "Misra-C Rule 21.16\n");
+		inform(loc, "[MISRA C:2025 Rule 21.16] the pointer argument to memcpy, memmove, memcmp or memset shall point to an object of an essential type\n");
 	} else if (misra_21_16_tmp[1] == 46 &&  misra_21_16_tmp[3] == 46) {
-		inform(loc, "Misra-C Rule 21.16\n");
+		inform(loc, "[MISRA C:2025 Rule 21.16] the pointer argument to memcpy, memmove, memcmp or memset shall point to an object of an essential type\n");
 	}
   }
   
@@ -4536,25 +4534,25 @@ convert_arguments (location_t loc, vec<location_t> arg_loc, tree typelist,
 		if (strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "__builtin_va_arg") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "__builtin_va_end") == 0 || 
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "__builtin_va_start") == 0) {
-			inform(loc, "Misra-C Rule 17.1\n");
+			inform(loc, "[MISRA C:2025 Rule 17.1] the features of <stdarg.h> shall not be used\n");
 		}
 		if (strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "printf") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "scanf") == 0) {
-			inform(loc, "Misra-C Rule 21.6\n");
+			inform(loc, "[MISRA C:2025 Rule 21.6] the Standard Library input/output functions shall not be used\n");
 		}
 		if (strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "clock") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "difftime") == 0) {
-			inform(loc, "Misra-C Rule 21.10\n");
+			inform(loc, "[MISRA C:2025 Rule 21.10] the Standard Library time and date functions shall not be used\n");
 		}
 		if (strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "feclearexcept") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "fegetexceptflag") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "feraiseexcept") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "fesetexceptflag") == 0 ||
 		    strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "fetestexcept") == 0) {
-			inform(loc, "Misra-C Rule 21.12\n");
+			inform(loc, "[MISRA C:2025 Rule 21.12] the exception handling features of <fenv.h> should not be used\n");
 		}
 		if (strcmp((char *)fundecl->decl_minimal.name->identifier.id.str, "sqrt") == 0) {
-			inform(loc, "Misra-C Rule 21.11\n");
+			inform(loc, "[MISRA C:2025 Rule 21.11] the Standard Library <tgmath.h> functions shall not be used\n");
 		}
 	}
   }
@@ -4693,7 +4691,7 @@ parser_build_binary_op (location_t location, enum tree_code code,
                 : TREE_TYPE (arg2.value));
   
   
-  if (arg1.original_type != NULL && OPT_Wmisra_c) {
+  if (arg1.original_type != NULL && Wmisra_c_trigger) {
 	if (misra_char_type_check(arg1.original_type)) {
 		misra_10_2.addr1 = (void *)arg1.original_type;
 	} else {
@@ -4702,7 +4700,7 @@ parser_build_binary_op (location_t location, enum tree_code code,
   } else {
 	misra_10_2.addr1 = NULL;
   }
-  if (arg2.original_type != NULL && OPT_Wmisra_c) {
+  if (arg2.original_type != NULL && Wmisra_c_trigger) {
         if (misra_char_type_check(arg2.original_type)) {
                 misra_10_2.addr2 = (void *)arg2.original_type;
         } else {
@@ -4711,64 +4709,64 @@ parser_build_binary_op (location_t location, enum tree_code code,
   } else {
         misra_10_2.addr2 = NULL;
   }
-  if (OPT_Wmisra_c && arg1.original_type != NULL) {
+  if (Wmisra_c_trigger && arg1.original_type != NULL) {
 	if (arg2.original_type != NULL) {
 		if (arg1.original_type->base.code != arg2.original_type->base.code) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		} else if (arg1.original_type->base.code == INTEGER_TYPE && 
 			   !(misra_char_type_check(arg1.original_type) || misra_char_type_check(arg2.original_type))
 			   && arg1.original_type->base.u.bits.unsigned_flag != arg2.original_type->base.u.bits.unsigned_flag) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		}
 	}
   }
   /*
-  if (OPT_Wmisra_c && arg1.original_type != NULL) {
+  if (Wmisra_c_trigger && arg1.original_type != NULL) {
 	if (arg2.original_type != NULL) {
 		if (arg1.original_type->base.code != arg2.original_type->base.code) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		} else if (misra_char_type_check(arg1.original_type) != misra_char_type_check(arg2.original_type) 
 			   && arg1.original_type->base.code != INTEGER_TYPE && arg2.original_type->base.code != INTEGER_TYPE) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		} else if (arg1.original_type->base.u.bits.unsigned_flag != arg2.original_type->base.u.bits.unsigned_flag
 			   && !(misra_char_type_check(arg1.original_type) || misra_char_type_check(arg2.original_type))) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		}
 	}
   }
   */
-  if (OPT_Wmisra_c && arg1.original_type == NULL) {
+  if (Wmisra_c_trigger && arg1.original_type == NULL) {
 	if (arg2.original_type != NULL) {
 		if (arg1.value->typed.type->base.code != arg2.original_type->base.code) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		} else if (arg1.value->typed.type->base.code == INTEGER_TYPE &&
                            !(misra_char_type_check(arg1.value->typed.type) || misra_char_type_check(arg2.original_type))
                            && arg1.value->typed.type->base.u.bits.unsigned_flag != arg2.original_type->base.u.bits.unsigned_flag) {
-                        inform(location, "Misra-C Rule 10.4\n");
+                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                 }
 	}
   }
 
-  if (OPT_Wmisra_c && arg1.original_type != NULL) {
+  if (Wmisra_c_trigger && arg1.original_type != NULL) {
 	if (arg2.original_type == NULL) {
 		if (arg1.original_type->base.code != arg2.value->typed.type->base.code) {
-			inform(location, "Misra-C Rule 10.4\n");
+			inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
 		} else if (arg1.original_type->base.code == INTEGER_TYPE &&
                            !(misra_char_type_check(arg1.original_type) || misra_char_type_check(arg2.value->typed.type))
                            && arg1.original_type->base.u.bits.unsigned_flag != arg2.value->typed.type->base.u.bits.unsigned_flag) {
-                        inform(location, "Misra-C Rule 10.4\n");
+                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                 }
 	}
   }
 
-  if (OPT_Wmisra_c && arg1.original_type == NULL) {
+  if (Wmisra_c_trigger && arg1.original_type == NULL) {
 	if (arg2.original_type == NULL) {
 		if (arg1.value->typed.type->base.code != arg2.value->typed.type->base.code) {
-                        inform(location, "Misra-C Rule 10.4\n");
+                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                 } else if (arg1.value->typed.type->base.code == INTEGER_TYPE &&
                            !(misra_char_type_check(arg1.value->typed.type) || misra_char_type_check(arg2.value->typed.type))
                            && arg1.value->typed.type->base.u.bits.unsigned_flag != arg2.value->typed.type->base.u.bits.unsigned_flag) {
-                        inform(location, "Misra-C Rule 10.4\n");
+                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                 }
 	}
   }
@@ -4903,12 +4901,12 @@ parser_build_binary_op (location_t location, enum tree_code code,
     warning_at (location, OPT_Wenum_compare,
 		"comparison between %qT and %qT",
 		type1, type2);
-  if (OPT_Wmisra_c) {
+  if (Wmisra_c_trigger) {
 	if (TREE_CODE_CLASS (code) == tcc_comparison
 	    && TREE_CODE (type1) == ENUMERAL_TYPE
 	    && TREE_CODE (type2) == ENUMERAL_TYPE
 	    && TYPE_MAIN_VARIANT (type1) != TYPE_MAIN_VARIANT (type2)) {
-		inform(location, "Misra-C Rule 10.4\n");	
+		inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");	
 	}
   }
 
@@ -5353,11 +5351,11 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       // MISRA-C Rule 10.1 Rationale 3, 4, 5
       /* Originally used xarg->typed.type->type_common.precision to check but it will become inaccurate when encountering type promotion,
  * 	 First check Bool type and Enum type, second check char(small int type), third check const char */
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (xarg->typed.type->base.code == BOOLEAN_TYPE || xarg->typed.type->base.code == ENUMERAL_TYPE ||
 	    xarg->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(xarg->typed.type) ||
 	    xarg->base.code == INTEGER_CST && xarg->type_common.precision < 16) {
-		inform(location, "Misra-C Rule 10.1\n");
+		inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
 	}
       }    
       if (!(typecode == INTEGER_TYPE || typecode == REAL_TYPE
@@ -5374,12 +5372,12 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
     // MISRA-C Rule 10.1 Rationale 3, 4, 5, 8
     // First check Bool type and Enum type, second check char(small int type), third check const char, last check unsigned int type
     case NEGATE_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (xarg->typed.type->base.code == BOOLEAN_TYPE || xarg->typed.type->base.code == ENUMERAL_TYPE ||
             xarg->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(xarg->typed.type) ||
 	    xarg->base.code == INTEGER_CST && xarg->typed.type->type_common.precision < 16 || 
 	    xarg->typed.type->base.code == INTEGER_TYPE	&& xarg->typed.type->base.u.bits.unsigned_flag) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       if (!(typecode == INTEGER_TYPE || typecode == REAL_TYPE
@@ -5394,9 +5392,9 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       break;
     // MISRA-C Rule 10.1 Rationale 3, 4, 5, 6, 1 (Only unsigned int is not in the specification of this operator).
     case BIT_NOT_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
       	if (xarg->typed.type->base.code == INTEGER_TYPE && !xarg->typed.type->base.u.bits.unsigned_flag) {
-            inform(location, "Misra-C Rule 10.1\n");
+            inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       /* ~ works on integer types and non float vectors. */
@@ -5461,9 +5459,9 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       break;
     // MISRA-C Rule 10.1 Rationale 2 (Only Bool type is not in the specification of this operator).
     case TRUTH_NOT_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (xarg->typed.type->base.code != BOOLEAN_TYPE) {
-		inform(location, "Misra-C Rule 10.1\n");
+		inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
 	}
       }
       if (typecode != INTEGER_TYPE && typecode != FIXED_POINT_TYPE
@@ -6479,7 +6477,7 @@ build_compound_expr (location_t loc, tree expr1, tree expr2)
 			"left-hand operand of comma expression has no effect");
 	    
 	    if (Wmisra_c_trigger) {
-		inform(loc, "Misra-C Rule 12.3 left-hand operand of comma expression has no effect\n");
+		inform(loc, "[MISRA C:2025 Rule 12.3] the comma operator should not be used; left-hand operand has no effect\n");
 	    }	
 	   }
 	}
@@ -7071,8 +7069,8 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
       tree base = TREE_OPERAND (comp, 0);    /* obj */
 
       if (!lvalue_p (base))                  /* obj 是臨時值 → 違規 */
-        warning_at (location, 0,             /* ← 用函式參數 `location` */
-                    "MISRA-C Rule 18.9");
+        warning_at (location, OPT_Wmisra_c,
+                    "[MISRA C:2025 Rule 18.9] array subscript on a non-lvalue array");
     }
   }
 
@@ -7101,13 +7099,13 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
       return error_mark_node;
     }
   /*
-  if (OPT_Wmisra_c) {
+  if (Wmisra_c_trigger) {
   	switch (modifycode) {
 		case PLUS_EXPR:
 			/*
         		if (lhs->typed.type->base.code == BOOLEAN_TYPE || lhs->typed.type->base.code == ENUMERAL_TYPE ||
             		    lhs->typed.type->base.code == BOOLEAN_TYPE || rhs->typed.type->base.code == ENUMERAL_TYPE) {
-                		inform(location, "Misra-C Rule 10.1\n");
+                		inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
 			}
 			
         		if (char_type_p(lhs_origtype)) {
@@ -7140,7 +7138,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
   DEF_ASSN_OPERATOR (">>=", RSHIFT_EXPR, "rS", 2)
   */
   /*
-  if (lhs_origtype != NULL && OPT_Wmisra_c) {
+  if (lhs_origtype != NULL && Wmisra_c_trigger) {
         if (char_type_p(lhs_origtype)) {
                 misra_10_2.addr1 = (void *)lhs_origtype;
         } else {
@@ -7149,7 +7147,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
   } else {
         misra_10_2.addr1 = NULL;
   }
-  if (rhs_origtype != NULL && OPT_Wmisra_c) {
+  if (rhs_origtype != NULL && Wmisra_c_trigger) {
         if (char_type_p(rhs_origtype)) {
                 misra_10_2.addr2 = (void *)rhs_origtype;
         } else {
@@ -7159,55 +7157,55 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
         misra_10_2.addr2 = NULL;
   }
   */
-  if (OPT_Wmisra_c && lhs_origtype != NULL && rhs_origtype != NULL) {
+  if (Wmisra_c_trigger && lhs_origtype != NULL && rhs_origtype != NULL) {
 	if (lhs_origtype->type_common.precision > rhs_origtype->type_common.precision) {
-		inform(rhs_loc, "Misra-C Rule 10.6\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.6] the value of a composite expression shall not be assigned to an object with a wider essential type\n");
 	} else if (rhs_origtype->type_common.precision > lhs_origtype->type_common.precision) {
 		if (lhs_origtype->type_common.precision == 8 && lhs_origtype->base.u.bits.unsigned_flag) { // 8bit unsigned int
 			if (rhs->int_cst.val[0] >= 0 && rhs->int_cst.val[0] < 256) {
 				;
 			} else {
-				inform(rhs_loc, "Misra-C Rule 10.3\n");
+				inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 			}
 		} else if (lhs_origtype->type_common.precision == 8 && !lhs_origtype->base.u.bits.unsigned_flag) { // 8bit signed int
 			if (rhs->int_cst.val[0] >= -128 && rhs->int_cst.val[0] < 128) {
 				;
 			} else {
-				inform(rhs_loc, "Misra-C Rule 10.3\n");
+				inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 			}	
 		} 
-		//inform(rhs_loc, "Misra-C Rule 10.3\n");
+		//inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
 	if (misra_char_type_check(rhs_origtype) && !misra_char_type_check(lhs_origtype)) {
-		inform(rhs_loc, "Misra-C Rule 10.3\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
   }
-  if (OPT_Wmisra_c && lhs_origtype && rhs_origtype == NULL) {
+  if (Wmisra_c_trigger && lhs_origtype && rhs_origtype == NULL) {
 	if (misra_char_type_check(lhs_origtype) && !rhs->typed.type->base.u.bits.unsigned_flag) {
-		inform(rhs_loc, "Misra-C Rule 10.3\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
 	if (lhs_origtype->base.code == INTEGER_TYPE && rhs->typed.type->base.code == REAL_TYPE) {
-		inform(rhs_loc, "Misra-C Rule 10.3\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
 	if (lhs_origtype->base.code == BOOLEAN_TYPE && !rhs->typed.type->base.u.bits.unsigned_flag && rhs->int_cst.val[0] != 0 && rhs->int_cst.val[0] != 1) {
-		inform(rhs_loc, "Misra-C Rule 10.3\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
 	if (lhs_origtype->type_common.precision != rhs->typed.type->type_common.precision && rhs->typed.type->type_common.precision == 64) {
-		inform(rhs_loc, "Misra-C Rule 10.3\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
 	if (lhs_origtype->type_common.precision > rhs->typed.type->type_common.precision) {
-		inform(rhs_loc, "Misra-C Rule 10.6\n");
+		inform(rhs_loc, "[MISRA C:2025 Rule 10.6] the value of a composite expression shall not be assigned to an object with a wider essential type\n");
 	}
   } 
   /*
-  if (OPT_Wmisra_c && lhs_origtype != NULL) {
+  if (Wmisra_c_trigger && lhs_origtype != NULL) {
         if (rhs_origtype != NULL) {
                 if (lhs_origtype->base.code != rhs_origtype->base.code) {
-                        inform(location, "Misra-C Rule 10.4\n");
+                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                 } else if (lhs_origtype->base.code == INTEGER_TYPE || rhs_origtype->base.code == INTEGER_TYPE) {
                         if (lhs->typed.type->base.u.bits.unsigned_flag != rhs->typed.type->base.u.bits.unsigned_flag &&
 			    !char_type_p(lhs_origtype) || char_type_p(rhs_origtype)) {
-                                inform(location, "Misra-C Rule 10.4\n");
+                                inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                         }
                 }
         } else {
@@ -7216,20 +7214,20 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
                             lhs_origtype->base.code == BOOLEAN_TYPE && rhs->typed.type->base.code == INTEGER_CST ||
                             lhs_origtype->base.code == REAL_TYPE && rhs->typed.type->base.code == REAL_CST) {
                                 if (lhs->typed.type->base.u.bits.unsigned_flag != rhs->typed.type->base.u.bits.unsigned_flag) {
-                                        inform(location, "Misra-C Rule 10.4\n");
+                                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                                 }
                         } else {
-                                inform(location, "Misra-C Rule 10.4\n");
+                                inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                         }
                 }
         }
-  } else if (OPT_Wmisra_c && lhs_origtype == NULL) {
+  } else if (Wmisra_c_trigger && lhs_origtype == NULL) {
         if (rhs_origtype != NULL) {
                 if (lhs->base.code != rhs_origtype->base.code) {
-                        inform(location, "Misra-C Rule 10.4\n");
+                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                 } else if (rhs_origtype->base.code == INTEGER_TYPE || lhs->typed.type->base.code == INTEGER_TYPE) {
                         if (lhs->typed.type->base.u.bits.unsigned_flag != rhs->typed.type->base.u.bits.unsigned_flag) {
-                                inform(location, "Misra-C Rule 10.4\n");
+                                inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                         }
                 }
         } else {
@@ -7237,7 +7235,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
                         if (lhs->typed.type->base.code == INTEGER_CST && rhs->typed.type->base.code == INTEGER_CST ||
                             lhs->typed.type->base.code == REAL_CST && rhs->typed.type->base.code == REAL_CST) {
                                 if (lhs->typed.type->base.u.bits.unsigned_flag != rhs->typed.type->base.u.bits.unsigned_flag) {
-                                        inform(location, "Misra-C Rule 10.4\n");
+                                        inform(location, "[MISRA C:2025 Rule 10.4] both operands of an operator with usual arithmetic conversions shall have the same essential type category\n");
                                 }
                        }
                 }
@@ -7436,8 +7434,8 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
      so that the value we return always has the same type
      as the LHS argument.  */
   /*
-  if (OPT_Wmisra_c && result->typed.type->base.u.bits.unsigned_flag != rhs->typed.type->base.u.bits.unsigned_flag && result->typed.type->base.code != ENUMERAL_TYPE) {
-	inform(location, "Misra-C Rule 10.3\n");
+  if (Wmisra_c_trigger && result->typed.type->base.u.bits.unsigned_flag != rhs->typed.type->base.u.bits.unsigned_flag && result->typed.type->base.code != ENUMERAL_TYPE) {
+	inform(location, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
   }
   */
   if (olhstype == TREE_TYPE (result))
@@ -7687,15 +7685,15 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 //printf("%s\nend\n", get_tree_code_name(TREE_CODE(rhs)));
 //printf("%s\nend\n", get_tree_code_name(TREE_CODE(type)));
 //printf("%s\nend\n", get_tree_code_name(TREE_CODE(origtype)));
-  if (OPT_Wmisra_c && type->base.code == INTEGER_TYPE && rhs->base.code == INTEGER_CST && (expr_loc == misra_rule_7_2_location)) {
+  if (Wmisra_c_trigger && type->base.code == INTEGER_TYPE && rhs->base.code == INTEGER_CST && (expr_loc == misra_rule_7_2_location)) {
 	if (type->base.u.bits.unsigned_flag && misra_check_rule_7_2) {
-		inform(expr_loc, "Misra-c Rule 7.2\n");
+		inform(expr_loc, "[MISRA C:2025 Rule 7.2] a suffix shall be applied to all integer constants not of type int\n");
 		misra_check_rule_7_2 = 0;
 	}
   }
-  if (OPT_Wmisra_c && !fundecl) {
+  if (Wmisra_c_trigger && !fundecl) {
         if (rhs->base.code == VA_ARG_EXPR) {
-                inform(expr_loc, "Misra-c Rule 17.1\n");
+                inform(expr_loc, "[MISRA C:2025 Rule 17.1] the features of <stdarg.h> shall not be used\n");
         }
   }
   if (errtype == ic_argpass)
@@ -7924,9 +7922,9 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 	      && (codel == INTEGER_TYPE || codel == ENUMERAL_TYPE)
 	      && (flag_sanitize & SANITIZE_FLOAT_CAST)))
 	in_late_binary_op = true;
-      if (OPT_Wmisra_c && rhs->base.code == PARM_DECL) {
+      if (Wmisra_c_trigger && rhs->base.code == PARM_DECL) {
 	if (type->type_common.precision != orig_rhs->typed.type->type_common.precision) {
-		inform(location, "Misra-C Rule 10.3\n");
+		inform(location, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
 	}
       }
       ret = convert_and_check (expr_loc != UNKNOWN_LOCATION
@@ -10960,7 +10958,7 @@ process_init_element (location_t loc, struct c_expr value, bool implicit,
                      && constructor_stack->misra_96_has_positional);
           if (v1 || v2)
             {
-              warning_at (loc, 0, "MISRA-C rule 9.6");
+              warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 9.6] designated and positional initializers shall not be mixed");
               constructor_stack->misra_96_reported = true;
             }
         }
@@ -11651,8 +11649,8 @@ c_finish_return (location_t loc, tree retval, tree origtype)
   source_location xloc = expansion_point_location_if_in_system_header (loc);
 
   if (TREE_THIS_VOLATILE (current_function_decl))
-    warning_at (xloc, 0,
-		"function declared %<noreturn%> has a %<return%> statement MISRA-C rule 17.9");
+    warning_at (xloc, OPT_Wmisra_c,
+		"[MISRA C:2025 Rule 17.9] function declared %<noreturn%> shall not return");
 
   if (flag_cilkplus && contains_array_notation_expr (retval))
     {
@@ -11910,7 +11908,7 @@ c_start_case (location_t switch_loc,
 		   && explicit_cast_p))
 	    bool_cond_p = true;
 	  if (bool_cond_p && Wmisra_c_trigger) {
-		inform(switch_cond_loc, "Misra-C Rule 16.7\n");
+		inform(switch_cond_loc, "[MISRA C:2025 Rule 16.7] a switch expression shall not have essentially Boolean type\n");
 	  }
 	  if (!in_system_header_at (input_location)
 	      && (type == long_integer_type_node
@@ -12780,32 +12778,32 @@ build_binary_op (location_t location, enum tree_code code,
     {
     case PLUS_EXPR:
       // MISRA-C Rule 10.1 Rationale 3, 5
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
 	    orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
 	if (misra_10_2.addr1 != NULL && orig_op0->base.code != VAR_DECL) {
 		if (((struct tree_int_cst *)orig_op0)->val[0] >= 48 && ((struct tree_int_cst *)orig_op0)->val[0] <= 57 && (orig_op1->typed.type->base.code == INTEGER_TYPE)) {
 			;
 		} else {
-			inform(location, "Misra-C Rule 10.2\n");
+			inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
 		}
 	} else if (misra_10_2.addr1 != NULL && orig_op0->base.code == VAR_DECL) {
 		if (orig_op1->typed.type->base.code != INTEGER_TYPE) {
-			inform(location, "Misra-C Rule 10.2\n");
+			inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
 		}
 	}
 	if (misra_10_2.addr2 != NULL && orig_op1->base.code != VAR_DECL) {
                 if (((struct tree_int_cst *)orig_op1)->val[0] >= 48 && ((struct tree_int_cst *)orig_op1)->val[0] <= 57 && (orig_op0->typed.type->base.code == INTEGER_TYPE)) {
                         ;
                 } else {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
 	else if (misra_10_2.addr2 != NULL && orig_op1->base.code == VAR_DECL) {
                 if (orig_op0->typed.type->base.code != INTEGER_TYPE) {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
       }
@@ -12827,24 +12825,24 @@ build_binary_op (location_t location, enum tree_code code,
     case MINUS_EXPR:
       /* Subtraction of two similar pointers.
 	 We must subtract them as integers, then divide by object size.  */
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
 	/*
 	if (misra_10_2.addr1 != NULL) {
                 if (((struct tree_int_cst *)orig_op0)->val[0] >= 48 && ((struct tree_int_cst *)orig_op0)->val[0] <= 57) {
                         ;
                 } else {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
         if (misra_10_2.addr2 != NULL) {
                 if (((struct tree_int_cst *)orig_op1)->val[0] >= 48 && ((struct tree_int_cst *)orig_op1)->val[0] <= 57) {
                         ;
                 } else {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
 	*/
@@ -12852,23 +12850,23 @@ build_binary_op (location_t location, enum tree_code code,
                 if (((struct tree_int_cst *)orig_op0)->val[0] >= 48 && ((struct tree_int_cst *)orig_op0)->val[0] <= 57 && orig_op1->typed.type->base.code == INTEGER_TYPE) {
                         ;
                 } else {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         } else if (misra_10_2.addr1 != NULL && orig_op0->base.code == VAR_DECL) {
                 if (orig_op1->typed.type->base.code != INTEGER_TYPE) {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
         if (misra_10_2.addr2 != NULL && orig_op1->base.code != VAR_DECL) {
                 if (((struct tree_int_cst *)orig_op1)->val[0] >= 48 && ((struct tree_int_cst *)orig_op1)->val[0] <= 57 && orig_op0->typed.type->base.code == INTEGER_TYPE) {
                         ;
                 } else {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
         else if (misra_10_2.addr2 != NULL && orig_op1->base.code == VAR_DECL) {
                 if (orig_op0->typed.type->base.code != INTEGER_TYPE) {
-                        inform(location, "Misra-C Rule 10.2\n");
+                        inform(location, "[MISRA C:2025 Rule 10.2] operands of addition or subtraction shall be of an appropriate essential type\n");
                 }
         }
       }
@@ -12889,12 +12887,12 @@ build_binary_op (location_t location, enum tree_code code,
       break;
 
     case MULT_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE ||
 	    orig_op0->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(orig_op0->typed.type) ||
 	    orig_op1->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(orig_op1->typed.type)) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       common = 1;
@@ -12905,12 +12903,12 @@ build_binary_op (location_t location, enum tree_code code,
     case FLOOR_DIV_EXPR:
     case ROUND_DIV_EXPR:
     case EXACT_DIV_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op0->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(orig_op0->typed.type) ||
             orig_op1->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(orig_op1->typed.type)) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       doing_div_or_mod = true;
@@ -12949,17 +12947,17 @@ build_binary_op (location_t location, enum tree_code code,
     case BIT_AND_EXPR:
     case BIT_IOR_EXPR:
     case BIT_XOR_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
 	/*
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE ||
 	    orig_op0->typed.type->base.code == REAL_TYPE || orig_op1->typed.type->base.code == REAL_TYPE) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
 	*/
 	if (orig_op0->typed.type->base.code == INTEGER_TYPE && !orig_op0->typed.type->base.u.bits.unsigned_flag || 
 	    orig_op1->typed.type->base.code == INTEGER_TYPE && !orig_op1->typed.type->base.u.bits.unsigned_flag) {
-	    inform(location, "Misra-C Rule 10.1\n");
+	    inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
       	}
       }
       if (code0 == INTEGER_TYPE && code1 == INTEGER_TYPE)
@@ -12974,13 +12972,13 @@ build_binary_op (location_t location, enum tree_code code,
 
     case TRUNC_MOD_EXPR:
     case FLOOR_MOD_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
       	if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE ||
             orig_op0->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(orig_op0->typed.type) ||
             orig_op1->typed.type->base.code == INTEGER_TYPE && misra_char_type_check(orig_op1->typed.type) || 
 	    orig_op0->typed.type->base.code == REAL_TYPE || orig_op1->typed.type->base.code == REAL_TYPE) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       doing_div_or_mod = true;
@@ -13008,9 +13006,9 @@ build_binary_op (location_t location, enum tree_code code,
     case TRUTH_AND_EXPR:
     case TRUTH_OR_EXPR:
     case TRUTH_XOR_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
 	if (orig_op0->typed.type->base.code != BOOLEAN_TYPE || orig_op1->typed.type->base.code != BOOLEAN_TYPE) {
-		inform(location, "Misra-C Rule 10.1\n");
+		inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
 	}
       }
       if ((code0 == INTEGER_TYPE || code0 == POINTER_TYPE
@@ -13070,10 +13068,10 @@ build_binary_op (location_t location, enum tree_code code,
 	 Also set SHORT_SHIFT if shifting rightward.  */
 
     case RSHIFT_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
       	if (orig_op0->typed.type->base.code == INTEGER_TYPE && !orig_op0->typed.type->base.u.bits.unsigned_flag ||
             orig_op1->typed.type->base.code == INTEGER_TYPE && !orig_op1->typed.type->base.u.bits.unsigned_flag) {
-            inform(location, "Misra-C Rule 10.1\n");
+            inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       if (code0 == VECTOR_TYPE && code1 == VECTOR_TYPE
@@ -13134,10 +13132,10 @@ build_binary_op (location_t location, enum tree_code code,
       break;
 
     case LSHIFT_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
       	if (orig_op0->typed.type->base.code == INTEGER_TYPE && !orig_op0->typed.type->base.u.bits.unsigned_flag ||
             orig_op1->typed.type->base.code == INTEGER_TYPE && !orig_op1->typed.type->base.u.bits.unsigned_flag) {
-            inform(location, "Misra-C Rule 10.1\n");
+            inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       if (code0 == VECTOR_TYPE && code1 == VECTOR_TYPE
@@ -13374,9 +13372,9 @@ build_binary_op (location_t location, enum tree_code code,
     case GE_EXPR:
     case LT_EXPR:
     case GT_EXPR:
-      if (OPT_Wmisra_c) {
+      if (Wmisra_c_trigger) {
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == BOOLEAN_TYPE) {
-                inform(location, "Misra-C Rule 10.1\n");
+                inform(location, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
         }
       }
       if (code0 == VECTOR_TYPE && code1 == VECTOR_TYPE)
@@ -13813,7 +13811,7 @@ build_binary_op (location_t location, enum tree_code code,
 		misra_const_integer_value = *((struct tree_int_cst *)orig_op0)->val + *((struct tree_int_cst *)orig_op1)->val;
   	}
 	if (misra_const_integer_value != *((struct tree_int_cst *)ret)->val) {
-		inform(location, "Misra-c Rule 12.4\n");
+		inform(location, "[MISRA C:2025 Rule 12.4] evaluation of constant expressions should not lead to unsigned integer wrap-around\n");
 	}
   }
   */
@@ -13851,13 +13849,13 @@ build_binary_op (location_t location, enum tree_code code,
                 misra_const_integer_value = *((struct tree_int_cst *)orig_op0)->val + *((struct tree_int_cst *)orig_op1)->val;
 		if (code == MINUS_EXPR || code == PLUS_EXPR) {
 			if (misra_const_integer_value != *((struct tree_int_cst *)ret)->val) {
-                		inform(location, "Misra-c Rule 12.4\n");
+                		inform(location, "[MISRA C:2025 Rule 12.4] evaluation of constant expressions should not lead to unsigned integer wrap-around\n");
         		}
 		}
         }
 	/*
         if (misra_const_integer_value != *((struct tree_int_cst *)ret)->val) {
-                inform(location, "Misra-c Rule 12.4\n");
+                inform(location, "[MISRA C:2025 Rule 12.4] evaluation of constant expressions should not lead to unsigned integer wrap-around\n");
         }
 	*/
   }
