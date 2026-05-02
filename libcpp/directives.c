@@ -624,7 +624,7 @@ lex_macro_node (cpp_reader *pfile, bool is_def_or_undef)
           ||ustrcmp(NODE_NAME(node) , (const uchar *)"defined") == 0  || ustrcmp(NODE_NAME(node) , (const uchar *)"errno") == 0 )
         
         cpp_warning (pfile, CPP_DL_NOTE,
-			  "[MISRA C:2025 Rule 20.15] #define and #undef shall not be used on a reserved identifier or reserved macro name");            //misra-c 21,01
+			  "MISRA C:2025 Rule 21.1\n");            //misra-c 21,01
       if (is_def_or_undef && node == pfile->spec_nodes.n_defined)
 	cpp_error (pfile, CPP_DL_ERROR,
 		   "\"defined\" cannot be used as a macro name");
@@ -743,11 +743,7 @@ do_undef (cpp_reader *pfile)
   cpp_hashnode *node = lex_macro_node (pfile, true);
 								//misra 20.5
   if(CPP_OPTION(pfile,Wmisra_cpp_trigger))
-  cpp_pedwarning (pfile,CPP_W_NONE,"\n================================Misra-c 2012 rule violation:20.5================================\n"\
-		"Rule 20.5:#undef should not be used\n"\
-		"Category:  Advisory\n"\
-		"Analysis:  Decidable, Single translation unit\n"
-		"Allpies to:C90, C99\n");
+  cpp_pedwarning (pfile,CPP_W_NONE,"MISRA C:2025 Rule 20.5\n");
   if (node)
     {
       if (pfile->cb.before_define)

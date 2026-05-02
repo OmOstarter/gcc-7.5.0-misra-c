@@ -40,12 +40,12 @@ along with GCC; see the file COPYING3.  If not see
 void
 constant_expression_warning (tree value)
 {
-  if (Wmisra_c_trigger && (TREE_CODE (value) == INTEGER_CST || TREE_CODE (value) == REAL_CST
+  if (OPT_Wmisra_c && (TREE_CODE (value) == INTEGER_CST || TREE_CODE (value) == REAL_CST
           || TREE_CODE (value) == FIXED_CST
           || TREE_CODE (value) == VECTOR_CST
           || TREE_CODE (value) == COMPLEX_CST)
       && TREE_OVERFLOW (value)) {
-		inform(input_location, "[MISRA C:2025 Rule 12.4] evaluation of constant expressions should not lead to unsigned integer wrap-around\n");
+		inform(input_location, "Misra-C Rule 12.4\n");
 	}
   if (warn_overflow && pedantic
       && (TREE_CODE (value) == INTEGER_CST || TREE_CODE (value) == REAL_CST
@@ -938,7 +938,7 @@ conversion_warning (location_t loc, tree type, tree expr)
     expr = TREE_OPERAND (expr, 0);
   /*
   if (expr->base.code != type->base.code) {
-	inform(loc,"[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n");
+	inform(loc,"Misra - 10.3\n");
   }
   */
   switch (TREE_CODE (expr))
@@ -963,16 +963,16 @@ conversion_warning (location_t loc, tree type, tree expr)
 		    "conversion to %qT from boolean expression", type);
       }
       /*	
-      if (TYPE_PRECISION (type) == 1 && TYPE_UNSIGNED (type) && Wmisra_c_trigger) {
+      if (TYPE_PRECISION (type) == 1 && TYPE_UNSIGNED (type) && OPT_Wmisra_c) {
 	if (type->base.code != expr_type->base.code)
-		inform(loc, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
+		inform(loc, "Misra-C Rule 10.1\n");
       }
 	*/
 	/*
 	// && || when operator not Bool type
-      if (Wmisra_c_trigger && (expr->base.code == TRUTH_ANDIF_EXPR || expr->base.code == TRUTH_ORIF_EXPR) 
+      if (OPT_Wmisra_c && (expr->base.code == TRUTH_ANDIF_EXPR || expr->base.code == TRUTH_ORIF_EXPR) 
 	&& type->base.code != BOOLEAN_TYPE || expr_type->base.code != BOOLEAN_TYPE) {
-	inform(loc, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
+	inform(loc, "Misra-C Rule 10.1\n");
       }	
 	*/
       return;
@@ -982,7 +982,7 @@ conversion_warning (location_t loc, tree type, tree expr)
     case COMPLEX_CST:
       conversion_kind = unsafe_conversion_p (loc, type, expr, true);
       if (conversion_kind == UNSAFE_REAL) {
-      	warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n", type, expr_type);
+      	warning_at (loc, OPT_Wmisra_c, "Misra - 10.3\n", type, expr_type);
       }
       if (conversion_kind == UNSAFE_REAL)
 	warning_at (loc, OPT_Wfloat_conversion,
@@ -1000,8 +1000,8 @@ conversion_warning (location_t loc, tree type, tree expr)
 	   COND_EXPR, only about the conversion of each operand.  */
 	tree op1 = TREE_OPERAND (expr, 1);
 	tree op2 = TREE_OPERAND (expr, 2);
-	if (expr_type->base.code != BOOLEAN_TYPE && Wmisra_c_trigger) {
-		inform(loc, "[MISRA C:2025 Rule 10.1] operands shall not be of an inappropriate essential type\n");
+	if (expr_type->base.code != BOOLEAN_TYPE && OPT_Wmisra_c) {
+		inform(loc, "Misra-C Rule 10.1\n");
 	}
 	conversion_warning (loc, type, op1);
 	conversion_warning (loc, type, op2);
@@ -1012,8 +1012,8 @@ conversion_warning (location_t loc, tree type, tree expr)
       conversion_kind = unsafe_conversion_p (loc, type, expr, true);
       //if (BIT_AND_EXPR BIT_XOR_EXPR  BIT_AND_EXPR)
       /*	
-      if (conversion_kind == UNSAFE_SIGN || conversion_kind == UNSAFE_OTHER && Wmisra_c_trigger) {
-	 warning_at (loc, OPT_Wmisra_c, "[MISRA C:2025 Rule 10.3] the value of an expression shall not be assigned to an object with a narrower essential type\n", type, expr_type);
+      if (conversion_kind == UNSAFE_SIGN || conversion_kind == UNSAFE_OTHER && OPT_Wmisra_c) {
+	 warning_at (loc, OPT_Wmisra_c, "Misra - 10.3\n", type, expr_type);
       }
       */
       if (conversion_kind == UNSAFE_REAL)
@@ -1056,8 +1056,8 @@ warnings_for_convert_and_check (location_t loc, tree type, tree expr,
 	  /* This detects cases like converting -129 or 256 to
 	     unsigned char.  */
 	  if (!int_fits_type_p (expr, c_common_signed_type (type))) {
-	    if (Wmisra_c_trigger) { 
-	    	inform(loc, "[MISRA C:2025 Rule 12.2] the right-hand operand of a shift operator shall lie in the valid range\n");
+	    if (OPT_Wmisra_c) { 
+	    	inform(loc, "Misra-C Rule 12.2\n");
 	    }
 	    warning_at (loc, OPT_Woverflow,
 	  		"large integer implicitly truncated to unsigned type");
@@ -1386,7 +1386,7 @@ readonly_error (location_t loc, tree arg, enum lvalue_use use)
 				 G_("function %qD used as %<asm%> output")),
 	      arg);
   else
-    error_at (loc, READONLY_MSG (G_("[MISRA C:2025 Rule 7.4] assignment of read-only location %qE"),
+    error_at (loc, READONLY_MSG (G_("Misra-c Rule 7.4 assignment of read-only location %qE"),
 				 G_("increment of read-only location %qE"),
 				 G_("decrement of read-only location %qE"),
 				 G_("read-only location %qE used as %<asm%> output")),
@@ -1664,7 +1664,7 @@ warn_for_unused_label (tree label)
   if (!TREE_USED (label))
     {
       if (DECL_INITIAL (label))
-	warning (OPT_Wmisra_c, "[MISRA C:2025 Rule 2.6] label %q+D is defined but not used", label);
+	warning (OPT_Wmisra_c, "Misra-c Rule 2.6\nlabel %q+D defined but not used", label);
       else
 	warning (OPT_Wunused_label, "label %q+D declared but not defined", label);
     }
@@ -1936,7 +1936,7 @@ do_warn_unused_parameter (tree fn)
       warning_at (DECL_SOURCE_LOCATION (decl), OPT_Wunused_parameter,
 		  "unused parameter %qD", decl);
       warning_at (DECL_SOURCE_LOCATION (decl), OPT_Wmisra_c,
-                  "[MISRA C:2025 Rule 2.7] parameter %qD is unused", decl);
+                  "Misra-C Rule 2.7\nunused parameter %qD", decl);
     }
 }
 
@@ -1997,11 +1997,11 @@ maybe_warn_unused_local_typedefs (void)
     {
       FOR_EACH_VEC_SAFE_ELT (l->local_typedefs, i, decl)
 	if (!TREE_USED (decl)) {
-	  if (Wmisra_c_trigger)
-	  	inform(input_location, "[MISRA C:2025 Rule 12.4] evaluation of constant expressions should not lead to unsigned integer wrap-around\n");
+	  if (OPT_Wmisra_c)
+	  	inform(input_location, "Misra-C Rule 12.4\n");
 	  warning_at (DECL_SOURCE_LOCATION (decl),
 		      OPT_Wunused_local_typedefs,
-		      "[MISRA C:2025 Rule 2.3] typedef %qD is locally defined but not used", decl);
+		      "MISRA C:2025 Rule 2.3\ntypedef %qD locally defined but not used", decl);
         }
 	unused_local_typedefs_warn_count = errorcount;
     }
