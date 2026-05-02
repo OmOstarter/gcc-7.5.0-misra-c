@@ -624,7 +624,7 @@ lex_macro_node (cpp_reader *pfile, bool is_def_or_undef)
           ||ustrcmp(NODE_NAME(node) , (const uchar *)"defined") == 0  || ustrcmp(NODE_NAME(node) , (const uchar *)"errno") == 0 )
         
         cpp_warning (pfile, CPP_DL_NOTE,
-			  "MISRA C:2025 Rule 21.1\n");            //misra-c 21,01
+			  "MISRA C:2025 Rule 20.15\n");            //misra-c 20.15 (was 21.1 in MISRA C:2012)
       if (is_def_or_undef && node == pfile->spec_nodes.n_defined)
 	cpp_error (pfile, CPP_DL_ERROR,
 		   "\"defined\" cannot be used as a macro name");
