@@ -1554,7 +1554,7 @@ cpp_interpret_string_1 (cpp_reader *pfile, const cpp_string *from, size_t count,
         }
         if (!misra_check) {
                 // break MISRA C:2025 Rule 4.1
-                cpp_error (pfile, CPP_DL_NOTE, "==========================MISRA C:2025 Rule 4.1==========================\nRule 4.1 Octal and hexadecimal escape sequences shall be terminated\nCategory Required\n");
+                cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
         }
   } else {
 	misra_check = from->len - 2;
@@ -1568,10 +1568,10 @@ cpp_interpret_string_1 (cpp_reader *pfile, const cpp_string *from, size_t count,
                                 misra_escape--;
                                 misra_check--;
                                 if (*misra_escape == 'x' && *(misra_escape - 1) == '\\') {
-                                        cpp_error (pfile, CPP_DL_NOTE, "==========================MISRA C:2025 Rule 4.1==========================\nRule 4.1 Octal and hexadecimal escape sequences shall be terminated\nCategory Required\n");
+                                        cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
                                 }
                                 if (*misra_escape == '\\') {
-                                        cpp_error (pfile, CPP_DL_NOTE, "==========================MISRA C:2025 Rule 4.1==========================\nRule 4.1 Octal and hexadecimal escape sequences shall be terminated\nCategory Required\n");
+                                        cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
                                 }
                         }
                 }
@@ -1994,12 +1994,12 @@ cpp_interpret_charconst (cpp_reader *pfile, const cpp_token *token,
 		}
 	}
 	if (!misra_check) {
-		cpp_error (pfile, CPP_DL_NOTE, "==========================MISRA C:2025 Rule 4.1==========================\nRule 4.1 Octal and hexadecimal escape sequences shall be terminated\nCategory Required\n");
+		cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
 	}
   } else {
         tmp_for_misra--;
 	if ((*tmp_for_misra >= '0') && (*tmp_for_misra <= '9')) {
-        	cpp_error (pfile, CPP_DL_NOTE, "==========================MISRA C:2025 Rule 4.1==========================\nRule 4.1 Octal and hexadecimal escape sequences shall be terminated\nCategory Required\n");   
+        	cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");   
         }	
   }
   

@@ -1149,11 +1149,10 @@ _cpp_process_line_notes (cpp_reader *pfile, int in_comment)
 				       (int) _cpp_trigraph_map[note->type]);
 	      else
 		{
-		  cpp_warning_with_line 
+		  cpp_warning_with_line
 		    (pfile, CPP_W_TRIGRAPHS,
                      pfile->line_table->highest_line, col,
-		     "MISRA C:2025 Rule 4.2 trigraph ??%c ignored, use -trigraphs to enable",
-		     note->type);
+		     "MISRA C:2025 Rule 4.2");
 		}
 	    }
 	}
@@ -1210,7 +1209,7 @@ _cpp_skip_block_comment (cpp_reader *pfile)
               cpp_warning_with_line (pfile, CPP_W_NONE,
                                      pfile->line_table->highest_line,
                                      CPP_BUF_COL (buffer),
-                                     "MISRA C:2025 Rule 3.1 \"/*\" within comment");
+                                     "MISRA C:2025 Rule 3.1");
             }
 	}
       else if (c == '\n')
@@ -2894,7 +2893,7 @@ _cpp_lex_direct (cpp_reader *pfile)
 	  //if (skip_line_comment (pfile) && CPP_OPTION (pfile, Wmisra_cpp_trigger))
           //  cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.2 multi-line comment");
 	  if (skip_line_comment (pfile) && CPP_OPTION (pfile, Wmisra_cpp_trigger))
-	    cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.2 multi-line comment");
+	    cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.2");
 	}
       else if (c == '=')
 	{
