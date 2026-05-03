@@ -1360,7 +1360,7 @@ update_label_decls (struct c_scope *scope)
 	if (Wmisra_c_trigger && misra_tmp_label_scope) {
 		if (scope->depth < misra_tmp_scope_depth) {
 			inform(input_location, "use goto label function location\n");
-			inform(misra_goto_location, "Misra-c 15.3\n");
+			inform(misra_goto_location, "MISRA C:2025 Rule 15.3\n");
 			//inform(misra_tmp_label_decl_locus, "the label is decl on here and the scope depth is %d and %d\n", misra_tmp_scope_depth, scope->depth);
 		}
 		misra_tmp_scope_depth = 0;

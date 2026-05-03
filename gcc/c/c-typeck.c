@@ -2459,7 +2459,7 @@ default_conversion (tree exp)
           && !lvalue_p (TREE_OPERAND (exp, 0)))
         warning_at (EXPR_LOC_OR_LOC (exp, input_location),
                     Wmisra_c_trigger,
-                    "MISRA 18.9 (array-to-pointer conversion of temporary object)");
+                    "MISRA C:2025 Rule 18.9");
 
       /* 保持原有行為：回傳 array 給呼叫端做 decay */
       return exp;
