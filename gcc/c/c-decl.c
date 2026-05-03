@@ -103,7 +103,7 @@ void hash_search_func(char *key,int value,int level,location_t locus)
 	return ;
 }
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-/* === MISRA-C Rule 22.13 (always-on, no option switch) ================== */
+/* === MISRA C:2025 Rule 22.13 (always-on, no option switch) ================== */
 
 static inline tree
 misra2213_peel_array_quals (tree t)
@@ -215,7 +215,7 @@ misra2213_check_decl (tree decl)
         }
     }
 }
-/* === MISRA-C Rule 22.13 (always-on, no option switch) END================== */
+/* === MISRA C:2025 Rule 22.13 (always-on, no option switch) END================== */
 
 /* In grokdeclarator, distinguish syntactic contexts of declarators.  */
 enum decl_context
@@ -1360,7 +1360,7 @@ update_label_decls (struct c_scope *scope)
 	if (Wmisra_c_trigger && misra_tmp_label_scope) {
 		if (scope->depth < misra_tmp_scope_depth) {
 			inform(input_location, "use goto label function location\n");
-			inform(misra_goto_location, "Misra-c 15.3\n");
+			inform(misra_goto_location, "MISRA C:2025 Rule 15.3\n");
 			//inform(misra_tmp_label_decl_locus, "the label is decl on here and the scope depth is %d and %d\n", misra_tmp_scope_depth, scope->depth);
 		}
 		misra_tmp_scope_depth = 0;
@@ -3961,7 +3961,9 @@ lookup_label_for_goto (location_t loc, tree name)
   /*
 	if(NUL_label&&Wmisra_c_trigger)
 	{
-		inform(loc,"MISRA C:2025 Rule 15.2\n");
+		inform(loc,"\n==========================MISRA C:2025 Rule 15.2==========================\n"
+		"Rule 15.2:The goto statement shall jump to a label declared later in the same function\n"
+		"Category: Required\n");
 	}
   */
   if (label == NULL_TREE)
@@ -5058,7 +5060,9 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
 		error ("variable-sized object may not be initialized");
   		//DebugTree(decl);
 	  /*{
-		inform(DECL_SOURCE_LOCATION(decl),"MISRA C:2025 Rule 13.4\n");
+		inform(DECL_SOURCE_LOCATION(decl),"\n==========================MISRA C:2025 Rule 13.4==========================\n"
+		"Rule 13.4:The result of an assignment operator should not be used\n"
+		"Category: Advisory\n");
 	  }*/
 		initialized = 0;
 	      }
@@ -5416,7 +5420,7 @@ finish_decl (tree decl, location_t init_loc, tree init,
 	  TREE_USED (decl) = 1;
 	  DECL_READ_P (decl) = 1;
 	}
-        /* MISRA-C Rule 22.13: always-on check for mtx_t/thrd_t/cnd_t/tss_t
+        /* MISRA C:2025 Rule 22.13: always-on check for mtx_t/thrd_t/cnd_t/tss_t
          with automatic or thread storage duration. 只在 VAR_DECL 跑。 */
       if (!error_operand_p (decl))
         misra2213_check_decl (decl);
@@ -6064,11 +6068,11 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 			while (!misra_decl->id_loc) {
 				misra_decl = misra_decl->declarator;
 			}
-			inform(misra_decl->id_loc, "Misra-C Rule 18.5\n");
+			inform(misra_decl->id_loc, "MISRA C:2025 Rule 18.5\n");
 		} else if (misra_pointer_level_checker > 2) {
-			inform(misra_decl->id_loc, "Misra-C Rule 18.5\n");
+			inform(misra_decl->id_loc, "MISRA C:2025 Rule 18.5\n");
 		} else if (misra_pointer_level_checker == 2 && misra_decl->kind == cdk_array && decl_context == PARM) {
-			inform(misra_decl->id_loc, "Misra-C Rule 18.5\n");
+			inform(misra_decl->id_loc, "MISRA C:2025 Rule 18.5\n");
 		}
 		misra_pointer_level_checker = 0;
 		if (misra_decl->kind == cdk_function && misra_decl->declarator) {
@@ -6082,7 +6086,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
                         	misra_decl = misra_decl->declarator;
 			}
 			if (misra_pointer_level_checker > 2) {
-				inform(misra_decl->id_loc, "Misra-C Rule 18.5\n");
+				inform(misra_decl->id_loc, "MISRA C:2025 Rule 18.5\n");
 			}
 		}
 		misra_pointer_level_checker = 0;
@@ -6223,7 +6227,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 		| ENCODE_QUAL_ADDR_SPACE (address_space));
   if (atomicp && TREE_CODE (type) == VOID_TYPE)
   {
-    warning_at (loc, OPT_Wmisra_c, "MISRA-C rule 11.10");
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.10");
     atomicp = false;
   }
   
@@ -8085,7 +8089,7 @@ grokfield (location_t loc,
 
   finish_decl (value, loc, NULL_TREE, NULL_TREE, NULL_TREE);
   DECL_INITIAL (value) = width;
-  // MISRA-C rule 18.10
+  // MISRA C:2025 Rule 18.10
   misra18_10_check_decl (value);
   if (warn_cxx_compat && DECL_NAME (value) != NULL_TREE)
     {
@@ -9632,7 +9636,7 @@ store_parm_decls_from (struct c_arg_info *arg_info)
 {
   current_function_arg_info = arg_info;
   store_parm_decls ();
-    /* MISRA-C Rule 18.10 — 檢查本函式所有參數（僅定義會走到這裡） */
+    /* MISRA C:2025 Rule 18.10 — 檢查本函式所有參數（僅定義會走到這裡） */
   for (tree p = DECL_ARGUMENTS (current_function_decl); p; p = DECL_CHAIN (p))
     {
       tree ty = TREE_TYPE (p);
@@ -9727,14 +9731,14 @@ store_parm_decls (void)
 				    set_labels_context_r, fndecl);
       add_stmt (arg_info->pending_sizes);
     }
-      /* MISRA C:2012 Rule 18.10 — 檢查本函式所有參數 */
+      /* MISRA C:2025 Rule 18.10 — 檢查本函式所有參數 */
   for (tree p = DECL_ARGUMENTS (current_function_decl); p; p = DECL_CHAIN (p))
     {
       if (misra18_10_ptr_to_vla_p (TREE_TYPE (p)))
         warning_at (DECL_SOURCE_LOCATION (p), OPT_Wmisra_c,
                     "MISRA C:2025 Rule 18.10");
     }
-      /* MISRA-C Rule 22.13 — 參數不得為 thrd_t/mtx_t/cnd_t/tss_t（自動儲存期） */
+      /* MISRA C:2025 Rule 22.13 — 參數不得為 thrd_t/mtx_t/cnd_t/tss_t（自動儲存期） */
   {
     tree f = current_function_decl;
     for (tree p = f ? DECL_ARGUMENTS (f) : NULL_TREE; p; p = DECL_CHAIN (p))

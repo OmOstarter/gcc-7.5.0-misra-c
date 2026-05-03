@@ -381,13 +381,17 @@ if(strcmp(file->name, name_before) !=0 )
  {
    if(strcmp(file->name, "setjmp.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.4\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n================================MISRA C:2025 Rule 21.4================================\n"\
+		"Rule 21.4:The standard header file <setjmp.h> shall not be used\n"\
+		"Category:  Required\n");
       strcpy(name_before,"setjmp.h");
    }
    else if(strcmp(file->name, "signal.h") == 0)	
 	
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.5\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================MISRA C:2025 Rule 21.5==========================\n"\
+		"Rule 21.5:The standard header file <signal.h> shall not be used\n"\
+		"Category:  Required\n");
       strcpy(name_before,"signal.h");
    }
 	
@@ -404,12 +408,16 @@ if(strcmp(file->name, name_before) !=0 )
    }
    else if(strcmp(file->name, "time.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.10\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================MISRA C:2025 Rule 21.10==========================\n"\
+		"Rule 21.10:The Standard Library time and date functions shall not be used\n"\
+		"Category:  Required\n");
       strcpy(name_before,"time.h");
    }
    else if(strcmp(file->name, "tgmath.h") == 0)
    {
-      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"MISRA C:2025 Rule 21.11\n");
+      cpp_warning_with_line_syshdr(pfile,CPP_W_NONE,loc,0,"\n==========================MISRA C:2025 Rule 21.11==========================\n"\
+		"Rule 21.11:The standard header file <tgmath.h> shall not be used\n"\
+		"Category:  Required\n");
       strcpy(name_before,"tgmath.h");
    }
    else{}

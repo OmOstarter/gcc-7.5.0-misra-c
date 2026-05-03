@@ -184,8 +184,8 @@ suggest_attribute (int option, tree decl, bool known_finite,
   warning_at (DECL_SOURCE_LOCATION (decl),
 	      option,
 	      known_finite
-	      ? G_("function might be candidate for attribute %qs MISRA-C rule 17.11") 
-	      : G_("function might be candidate for attribute %qs MISRA-C rule 17.11"
+	      ? G_("function might be candidate for attribute %qs MISRA C:2025 Rule 17.11") 
+	      : G_("function might be candidate for attribute %qs MISRA C:2025 Rule 17.11"
 		   " if it is known to return normally"), attrib_name);
   return warned_about;
 }

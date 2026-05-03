@@ -146,7 +146,7 @@ misra_expr_has_potential_side_effects (tree t)
     }
   return false;
 }
-/* === MISRA-C Rule 23.4 helpers === */
+/* === MISRA C:2025 Rule 23.4 helpers === */
 static bool
 misra234_is_unnamed_record_or_union (tree t)
 {
@@ -204,7 +204,7 @@ misra234_is_forbidden_assoc_type (tree t)
 }
 /* === end helpers === */
 
-/* MISRA-C Rule 23.5: 檢查 from 指標是否可以在 C 的一般語境中
+/* MISRA C:2025 Rule 23.5: 檢查 from 指標是否可以在 C 的一般語境中
    隱式轉換成 to 指標（例如函式參數傳遞）。我們只處理兩類：
    1) T * -> cv T *
    2) 任意物件指標 -> cv void *   */
@@ -5878,7 +5878,7 @@ c_parser_if_body (c_parser *parser, bool *if_p,
   token_indent_info body_tinfo
     = get_token_indent_info (c_parser_peek_token (parser));
   
-  // check MISRA-C Rule 15.6
+  // check MISRA C:2025 Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE && Wmisra_c_trigger) {
         warning_at(parser->tokens->location, OPT_Wmisra_c, "MISRA C:2025 Rule 15.6");
   }
@@ -6269,7 +6269,7 @@ c_parser_while_statement (c_parser *parser, bool ivdep, bool *if_p)
 
   token_indent_info body_tinfo
     = get_token_indent_info (c_parser_peek_token (parser));
-  // check MISRA-C Rule 15.6
+  // check MISRA C:2025 Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE && Wmisra_c_trigger) {
     warning_at(parser->tokens->location, OPT_Wmisra_c, "MISRA C:2025 Rule 15.6");
   }
@@ -6307,7 +6307,7 @@ c_parser_do_statement (c_parser *parser, bool ivdep)
     warning_at (c_parser_peek_token (parser)->location,
         OPT_Wempty_body,
         "suggest braces around empty body in %<do%> statement");
-  // check do while for MISRA-C Rule 15.6
+  // check do while for MISRA C:2025 Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE) {
     if (Wmisra_c_trigger) {
         warning_at(parser->tokens->location, OPT_Wmisra_c, "MISRA C:2025 Rule 15.6");
@@ -6538,7 +6538,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
       else
         {
           /* 
-          // check MISRA-C Rule 14.4 for for statement
+          // check MISRA C:2025 Rule 14.4 for for statement
           if (misra_14_4 != 10 && !misra_14_4_bool_type) {
             if (Wmisra_c_trigger) {
                     warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 14.4");
@@ -6548,7 +6548,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
           misra_14_4_bool_type = 0;
           */
 	  cond = c_parser_condition (parser);
-	  // check MISRA-C Rule 14.4 for for statement
+	  // check MISRA C:2025 Rule 14.4 for for statement
           if (misra_14_4 != 10 && !misra_14_4_bool_type) {
             if (Wmisra_c_trigger) {
                     warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 14.4");
@@ -6603,7 +6603,7 @@ c_parser_for_statement (c_parser *parser, bool ivdep, bool *if_p)
 
   token_indent_info body_tinfo
     = get_token_indent_info (c_parser_peek_token (parser));
-  // check MISRA-C Rule 15.6
+  // check MISRA C:2025 Rule 15.6
   if (parser->tokens->type != CPP_OPEN_BRACE) {
     if (Wmisra_c_trigger) {
         warning_at(parser->tokens->location, OPT_Wmisra_c, "MISRA C:2025 Rule 15.6");
@@ -7630,7 +7630,7 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
       {
     location_t expr_loc = c_parser_peek_token (parser)->location;
     expr = c_parser_cast_expression (parser, NULL);
-    // MISRA-C Rule 10-5
+    // MISRA C:2025 Rule 10.5
     /*
     if (Wmisra_c_trigger) {
 	if (expr.original_type) {
@@ -7688,7 +7688,7 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
 		}
 	}
     }
-    // MISRA-C Rule 10.8
+    // MISRA C:2025 Rule 10.8
     if (Wmisra_c_trigger) {
 	if (expr.value->base.used_flag) {
 		goto MISRA_RULE;
@@ -8184,7 +8184,7 @@ struct c_generic_association
   struct c_expr expression;
 };
 /* ======================================================================= */
-/* MISRA-C: Rule 23.6 helper                                               */
+/* MISRA C:2025 Rule 23.6 helper                                               */
 /* The controlling expression of a generic selection shall have an         */
 /* essential type that matches its standard type.                          */
 /* ======================================================================= */
@@ -8552,7 +8552,7 @@ misra_check_generic_rule236 (location_t generic_loc,
      default : assignment-expression
 */
 
-/* === MISRA-C Rule 23.7 helpers: 收集 / 比對 selector 用到的變數 === */
+/* === MISRA C:2025 Rule 23.7 helpers: 收集 / 比對 selector 用到的變數 === */
 
 struct misra237_varset
 {
@@ -8640,7 +8640,7 @@ misra237_expr_uses_any_var (tree expr, struct misra237_varset *selector_vars)
   walk_tree (&expr, misra237_use_check_cb, &d, NULL);
   return d.found;
 }
-/* === MISRA-C Rule 23.7:
+/* === MISRA C:2025 Rule 23.7:
    A generic selection that is expanded from a macro should evaluate its
    argument only once.
    策略：如果 selector 用到的變數，在某些 association 的結果有用到、
@@ -8709,7 +8709,7 @@ c_parser_generic_selection (c_parser *parser)
   int misra233_non_default_count = 0;
   bool misra233_default_seen = false;
 /* === 新增結束 === */
- /* === MISRA-C Rule 23.8：統計 default 位置 === */
+ /* === MISRA C:2025 Rule 23.8：統計 default 位置 === */
   int misra238_assoc_index = 0;    /* 目前是第幾個 association（1-based） */
   int misra238_default_index = 0;  /* 0 表示尚未出現 default */
   /* === MISRA-C 變數結束 === */
@@ -8723,7 +8723,7 @@ c_parser_generic_selection (c_parser *parser)
   gcc_assert (c_parser_next_token_is_keyword (parser, RID_GENERIC));
   generic_loc = c_parser_peek_token (parser)->location;
 
-  /* MISRA-C Rule 23.1：_Generic 必須來自函式形式巨集的展開 */
+  /* MISRA C:2025 Rule 23.1：_Generic 必須來自函式形式巨集的展開 */
   if (!in_system_header_at (generic_loc))
     {
       /* GCC 7 可用：from_macro_expansion_at(loc) */
@@ -8831,7 +8831,7 @@ c_parser_generic_selection (c_parser *parser)
               "%<_Generic%> association has "
               "variable length type");
     }
-      /* === MISRA-C Rule 23.4: association shall list appropriate selectable types === */
+      /* === MISRA C:2025 Rule 23.4: association shall list appropriate selectable types === */
       if (assoc.type
           && !in_system_header_at (generic_loc)  /* 系統標頭內不吵你，可依需求拿掉這行 */
           && misra234_is_forbidden_assoc_type (assoc.type))
@@ -8840,7 +8840,7 @@ c_parser_generic_selection (c_parser *parser)
           if (!why) why = "non-selectable type";
           warning_at(assoc.type_location, OPT_Wmisra_c, "MISRA C:2025 Rule 23.4");
         }
-      /* === end MISRA-C Rule 23.4 === */
+      /* === end MISRA C:2025 Rule 23.4 === */
 
 
       if (!c_parser_require (parser, CPP_COLON, "expected %<:%>"))
@@ -8856,7 +8856,7 @@ c_parser_generic_selection (c_parser *parser)
       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
       return error_expr;
     }
-      /* === MISRA-C Rule 23.8：紀錄 default 在第幾個 association === */
+      /* === MISRA C:2025 Rule 23.8：紀錄 default 在第幾個 association === */
       misra238_assoc_index++;
 
       /* 第一個看到的 default，就記錄它的 index。
@@ -8918,7 +8918,7 @@ c_parser_generic_selection (c_parser *parser)
       c_parser_consume_token (parser);
     }
 
-  /* === MISRA-C Rule 23.8：default 必須是第一個或最後一個 === */
+  /* === MISRA C:2025 Rule 23.8：default 必須是第一個或最後一個 === */
   if (!in_system_header_at (generic_loc)          /* 不檢查系統標頭 */
       /* 你若有 MISRA 開關，就順便加上，例如：flag_misra_c */
       && misra238_default_index != 0              /* 有 default 才檢查 */
@@ -8934,7 +8934,7 @@ c_parser_generic_selection (c_parser *parser)
 
   
   
-    /* MISRA-C Rule 23.3：只有 default 而沒有任何非預設關聯 → 警告 */
+    /* MISRA C:2025 Rule 23.3：只有 default 而沒有任何非預設關聯 → 警告 */
   if (!in_system_header_at (generic_loc)
       && misra233_default_seen
       && misra233_non_default_count == 0)
@@ -8943,7 +8943,7 @@ c_parser_generic_selection (c_parser *parser)
     }
 
     /* ←─ 到這裡為止 ─→ */
-      /* MISRA-C Rule 23.5：generic selection 不應依賴隱式指標型別轉換。
+      /* MISRA C:2025 Rule 23.5：generic selection 不應依賴隱式指標型別轉換。
      條件：
        - 控制運算元型別是指標（selector_type 是 POINTER_TYPE）
        - 已經找到 match，且選到的是 default 關聯（matched_assoc.type == NULL_TREE）
@@ -8981,7 +8981,7 @@ c_parser_generic_selection (c_parser *parser)
     }
   /* ★ MISRA 23.5 到此結束 ★ */
   
-  /* MISRA-C: Rule 23.7 檢查：
+  /* MISRA C:2025 Rule 23.7 檢查：
      檢查 selector 是否只在所有 association 中一致地使用 */
   misra_check_generic_rule237 (generic_loc, &selector, &associations);
 
@@ -8999,7 +8999,7 @@ c_parser_generic_selection (c_parser *parser)
         selector_type);
       return error_expr;
     }
-  /* MISRA-C: Rule 23.6 檢查 */
+  /* MISRA C:2025 Rule 23.6 檢查 */
   if (!in_system_header_at (generic_loc))
     misra_check_generic_rule236 (generic_loc, &selector, &matched_assoc);
 
