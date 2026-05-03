@@ -743,11 +743,7 @@ do_undef (cpp_reader *pfile)
   cpp_hashnode *node = lex_macro_node (pfile, true);
 								//misra 20.5
   if(CPP_OPTION(pfile,Wmisra_cpp_trigger))
-  cpp_pedwarning (pfile,CPP_W_NONE,"\n================================MISRA C:2025 Rule 20.5================================\n"\
-		"Rule 20.5:#undef should not be used\n"\
-		"Category:  Advisory\n"\
-		"Analysis:  Decidable, Single translation unit\n"
-		"Allpies to:C90, C99\n");
+  cpp_pedwarning (pfile,CPP_W_NONE,"MISRA C:2025 Rule 20.5");
   if (node)
     {
       if (pfile->cb.before_define)

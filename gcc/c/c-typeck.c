@@ -3215,9 +3215,7 @@ c_expr_sizeof_expr (location_t loc, struct c_expr expr)
 	||TREE_CODE(expr.value) == POSTINCREMENT_EXPR\
 	||TREE_CODE(expr.value) == POSTDECREMENT_EXPR)
   	  {
-		inform(loc,"\n==========================MISRA C:2025 Rule 13.6==========================\n"
-		"Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n"
-		"Category: Mandatory\n");
+		inform(loc,"MISRA C:2025 Rule 13.6");
 	  }
 
   struct c_expr ret;
@@ -3351,9 +3349,7 @@ c_expr_sizeof_type (location_t loc, struct c_type_name *t)
 	
 	if(c_type_check_volatile(ret.value,loc) && Wmisra_c_trigger)
     	{
-		inform(loc,"\n==========================MISRA C:2025 Rule 13.6==========================\n"
-		"Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n"
-		"Category: Mandatory\n");
+		inform(loc,"MISRA C:2025 Rule 13.6");
 	  }
 		// {
 		// 	inform(loc,"MISRA C:2025 Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n");
@@ -4562,36 +4558,26 @@ convert_arguments (location_t loc, vec<location_t> arg_loc, tree typelist,
     strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"va_start") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"va_end") ==0||
     strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"va_copy") ==0)
     	{
-	    	inform(loc,"\n==========================MISRA C:2025 Rule 17.1==========================\n"
-	    	"Rule 17.1:The features of <stdarg.h> shall not be used\n"
-		    "Category: Required\n");
+	    	inform(loc,"MISRA C:2025 Rule 17.1");
 	    }
 			 if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"malloc") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"calloc") ==0||
     strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"realloc") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"free") ==0)
       {
-	       inform(loc,"\n==========================MISRA C:2025 Rule 21.3==========================\n"
-		    "Rule 21.3:The memory allocation and deallocation functions of <stdlib.h>shall not be used\n"
-	    	"Category: Required\n");
+	       inform(loc,"MISRA C:2025 Rule 21.3");
 	    }
   			if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atof") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atoi") ==0||
      strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atol") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atoll") ==0)
         {
-	       inform(loc,"\n==========================MISRA C:2025 Rule 21.7==========================\n"
-		    "Rule 21.7:The atof, atoi, atol and atoll functions of <stdlib.h> shall not be used\n"
-	    	"Category: Required\n");
+	       inform(loc,"MISRA C:2025 Rule 21.7");
 	       }
   			if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"abort") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"exit") ==0||
      strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"getenv") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"system") ==0)
           {
-	       inform(loc,"\n==========================MISRA C:2025 Rule 21.8==========================\n"
-		    "Rule 21.8:The library functions abort, exit, getenv and system of <stdlib.h> shall not be used\n"
-	    	"Category: Required\n");
+	       inform(loc,"MISRA C:2025 Rule 21.8");
 	         }
  			if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"bsearch") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"qsort") ==0)
         {
-	       inform(loc,"\n==========================MISRA C:2025 Rule 21.9==========================\n"
-		    "Rule 21.9:The library functions bsearch and qsort of <stdlib.h> shall not be used\n"
-	    	"Category: Required\n");
+	       inform(loc,"MISRA C:2025 Rule 21.9");
 	      }
 	}
 }
@@ -5517,8 +5503,7 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
 
 	/*if((code == PREINCREMENT_EXPR|| code == POSTINCREMENT_EXPR) && Wmisra_c_trigger)
   	{
-		inform(location,"\n==========================MISRA C:2025 Rule 13.3==========================\n"
-		"Rule 13.3:full expression containing an increment (++) or decrement (--)operator should have no other potential side ffects"
+		inform(location,"MISRA C:2025 Rule 13.3"
      "other than that caused by the increment or decrement operator\n"
 		"Category: Advisory\n");
 	  }*/
@@ -7247,8 +7232,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 	if((treecode_13_3 == PREINCREMENT_EXPR|| treecode_13_3 == PREDECREMENT_EXPR\
 || treecode_13_3 == POSTINCREMENT_EXPR|| treecode_13_3 == POSTDECREMENT_EXPR) && Wmisra_c_trigger)
     	{
-		inform(location,"\n==========================MISRA C:2025 Rule 13.3==========================\n"
-		"Rule 13.3:full expression containing an increment (++) or decrement (--)operator should have no other potential side ffects"
+		inform(location,"MISRA C:2025 Rule 13.3"
      "other than that caused by the increment or decrement operator\n"
 		"Category: Advisory\n");
 	  }		
@@ -8035,25 +8019,17 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 		       & ~TYPE_QUALS_NO_ADDR_SPACE (ttl)) {
 		PEDWARN_FOR_QUALIFIERS (location, expr_loc,
                                         OPT_Wdiscarded_qualifiers,
-                                        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
-                                           "%qv qualifier from pointer target type"),
-                                        G_("assignment discards %qv qualifier "
-                                           "from pointer target type"),
-                                        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
-                                           "from pointer target type"),
-                                        G_("return discards %qv qualifier from "
-                                           "pointer target type"),
+                                        G_("MISRA C:2025 Rule 7.4"),
+                                        G_("MISRA C:2025 Rule 7.4"),
+                                        G_("MISRA C:2025 Rule 7.4"),
+                                        G_("MISRA C:2025 Rule 7.4"),
                                         TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		PEDWARN_FOR_QUALIFIERS (location, expr_loc,
 				        OPT_Wdiscarded_qualifiers,
-				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
-					   "%qv qualifier from pointer target type"),
-				        G_("assignment discards %qv qualifier "
-					   "from pointer target type"),
-				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
-					   "from pointer target type"),
-				        G_("return discards %qv qualifier from "
-					   "pointer target type"),
+				        G_("MISRA C:2025 Rule 7.4"),
+				        G_("MISRA C:2025 Rule 7.4"),
+				        G_("MISRA C:2025 Rule 7.4"),
+				        G_("MISRA C:2025 Rule 7.4"),
 				        TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		}
 	      memb = marginal_memb;
@@ -8213,14 +8189,10 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 		  & ~TYPE_QUALS_NO_ADDR_SPACE_NO_ATOMIC (ttl)) {
 		WARNING_FOR_QUALIFIERS (location, expr_loc,
 				        OPT_Wdiscarded_qualifiers,
-				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
-					   "%qv qualifier from pointer target type"),
-				        G_("assignment discards %qv qualifier "
-					   "from pointer target type"),
-				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
-					   "from pointer target type"),
-				        G_("return discards %qv qualifier from "
-					   "pointer target type"),
+				        G_("MISRA C:2025 Rule 7.4"),
+				        G_("MISRA C:2025 Rule 7.4"),
+				        G_("MISRA C:2025 Rule 7.4"),
+				        G_("MISRA C:2025 Rule 7.4"),
                                         TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		}
             }
@@ -8258,14 +8230,10 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 
 		  PEDWARN_FOR_QUALIFIERS (location, expr_loc,
 				          OPT_Wdiscarded_qualifiers,
-				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
-					     "%qv qualifier from pointer target type"),
-				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\nassignment discards %qv qualifier "
-					     "from pointer target type"),
-				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
-					     "from pointer target type"),
-				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\nreturn discards %qv qualifier from "
-					     "pointer target type"),
+				          G_("MISRA C:2025 Rule 7.4"),
+				          G_("MISRA C:2025 Rule 7.4"),
+				          G_("MISRA C:2025 Rule 7.4"),
+				          G_("MISRA C:2025 Rule 7.4"),
 				          TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		}
 	      /* If this is not a case of ignoring a mismatch in signedness,
@@ -9512,9 +9480,7 @@ push_init_level (location_t loc, int implicit,
 	initializer_stack->missing_brace_richloc->add_fixit_insert_before
 	  (loc, "{");
       if( Wmisra_c_trigger )    	
-		    inform(loc,"\n==========================MISRA C:2025 Rule 9.2==========================\n"
-		    "Rule 9.2:The initializer for an aggregate or union shall be enclosed in braces\n"
-		    "Category: Required\n");}
+		    inform(loc,"MISRA C:2025 Rule 9.2");}
 	    
 
     }
@@ -9907,9 +9873,7 @@ void misra_c_9_4(tree array_index,location_t loc)
 	 	for(int i=0;i<array_index_vec.length();i++)
 	 	{
 	 		if(TREE_INT_CST_ELT(array_index, 0)==array_index_vec[i]){ 	
-				inform(loc,"\n==========================MISRA C:2025 Rule 9.4==========================\n"
-				"Rule 9.4:An element of an object shall not be initialized more than once\n"
-				"Category: Required\n");
+				inform(loc,"MISRA C:2025 Rule 9.4");
 				 warning = 1;}
 	 	}
 	 }
