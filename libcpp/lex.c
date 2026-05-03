@@ -1152,7 +1152,7 @@ _cpp_process_line_notes (cpp_reader *pfile, int in_comment)
 		  cpp_warning_with_line 
 		    (pfile, CPP_W_TRIGRAPHS,
                      pfile->line_table->highest_line, col,
-		     "Misra-c Rule 4.2 trigraph ??%c ignored, use -trigraphs to enable",
+		     "MISRA C:2025 Rule 4.2 trigraph ??%c ignored, use -trigraphs to enable",
 		     note->type);
 		}
 	    }
@@ -1210,7 +1210,7 @@ _cpp_skip_block_comment (cpp_reader *pfile)
               cpp_warning_with_line (pfile, CPP_W_NONE,
                                      pfile->line_table->highest_line,
                                      CPP_BUF_COL (buffer),
-                                     "Misra-c Rule 3.1 \"/*\" within comment");
+                                     "MISRA C:2025 Rule 3.1 \"/*\" within comment");
             }
 	}
       else if (c == '\n')
@@ -1249,9 +1249,9 @@ skip_line_comment (cpp_reader *pfile)
           misra_rule_3_1++;
       if (*buffer->cur == '*') {
         if (misra_rule_3_1) {
-                cpp_warning (pfile, CPP_W_NONE, "Misra-c Rule 3.1");
+                cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.1");
         } else if (!misra_rule_3_1 && buffer->cur[1] == '/') {
-		cpp_warning (pfile, CPP_W_NONE, "Misra-c Rule 3.1");
+		cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.1");
 	}
       }
     }
@@ -2892,9 +2892,9 @@ _cpp_lex_direct (cpp_reader *pfile)
 		}
 	    }
 	  //if (skip_line_comment (pfile) && CPP_OPTION (pfile, Wmisra_cpp_trigger))
-          //  cpp_warning (pfile, CPP_W_NONE, "Misra-c Rule 3.2 multi-line comment");
-	  if (skip_line_comment (pfile) && (CPP_OPTION (pfile, warn_comments) || CPP_OPTION (pfile, Wmisra_cpp_trigger)))
-	    cpp_warning (pfile, CPP_W_NONE, "Misra-c Rule 3.2 multi-line comment");
+          //  cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.2 multi-line comment");
+	  if (skip_line_comment (pfile) && CPP_OPTION (pfile, Wmisra_cpp_trigger))
+	    cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 3.2 multi-line comment");
 	}
       else if (c == '=')
 	{

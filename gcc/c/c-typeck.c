@@ -212,7 +212,7 @@ misra_promoted_main_type (tree t)
   return t;
 }
 /* ====================================================================== */
-/* —— MISRA-C Rule 21.26 support —— */
+/* —— MISRA C:2025 Rule 21.26 support —— */
 
 /* 注意：要讓 GC 掃描，struct 需要 GTY 標註；enum 直接用 int 儲存即可 */
 struct GTY(()) misra_mtx_rec {
@@ -2235,7 +2235,7 @@ mark_exp_read (tree exp)
 struct c_expr
 default_function_array_conversion (location_t loc, struct c_expr exp)
 {
-  /* ---------- MISRA-C Rule 18.9 ---------- */
+  /* ---------- MISRA C:2025 Rule 18.9 ---------- */
   tree t = exp.value;          /* 取真正 tree 節點 */
 
   if (TREE_CODE (t) == COMPONENT_REF
@@ -2448,7 +2448,7 @@ default_conversion (tree exp)
   /* Functions and arrays have been converted during parsing.  */
   gcc_assert (code != FUNCTION_TYPE);
  /*------------------------------------------------------------*
-   * MISRA-C:2012 Rule 18.9                                     *
+   * MISRA C:2025 Rule 18.9                                     *
    * 若臨時物件(struct/union) 的陣列成員進行 array-to-pointer  *
    * 轉換，立即發警告                                          *
    *------------------------------------------------------------*/
@@ -3215,7 +3215,9 @@ c_expr_sizeof_expr (location_t loc, struct c_expr expr)
 	||TREE_CODE(expr.value) == POSTINCREMENT_EXPR\
 	||TREE_CODE(expr.value) == POSTDECREMENT_EXPR)
   	  {
-		inform(loc,"MISRA C:2025 Rule 13.6\n");
+		inform(loc,"\n==========================MISRA C:2025 Rule 13.6==========================\n"
+		"Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n"
+		"Category: Mandatory\n");
 	  }
 
   struct c_expr ret;
@@ -3321,7 +3323,7 @@ c_expr_sizeof_type (location_t loc, struct c_type_name *t)
 	//debug_tree(ret.value);
 	//if(CONVERT_EXPR_CODE_P(TREE_CODE(ret.value)))
 	//{
-		//inform(loc,"Misra-c 2012 rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n");
+		//inform(loc,"MISRA C:2025 Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n");
 	//}
   if ((type_expr || TREE_CODE (ret.value) == INTEGER_CST)
       && c_vla_type_p (type))
@@ -3349,10 +3351,12 @@ c_expr_sizeof_type (location_t loc, struct c_type_name *t)
 	
 	if(c_type_check_volatile(ret.value,loc) && Wmisra_c_trigger)
     	{
-		inform(loc,"MISRA C:2025 Rule 13.6\n");
+		inform(loc,"\n==========================MISRA C:2025 Rule 13.6==========================\n"
+		"Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n"
+		"Category: Mandatory\n");
 	  }
 		// {
-		// 	inform(loc,"Misra-c 2012 rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n");
+		// 	inform(loc,"MISRA C:2025 Rule 13.6:The operand of the sizeof operator shall not contain any expression which has potential side effects\n");
 		// }
 	
 	//printf("c_type_check_volatile:%d\n",c_type_check_volatile(ret.value,loc));
@@ -3404,7 +3408,7 @@ int misra_21_15_counter;
 long long int misra_21_16_tmp[4];
 int misra_21_16_counter;
 
-/* === MISRA Rule 1.4：Annex K 函式名清單 === */
+/* === MISRA C:2025 Rule 1.4：Annex K 函式名清單 === */
 static bool
 misra_is_annex_k_function_name (const char *name)
 {
@@ -3474,7 +3478,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
 			 tree function, vec<tree, va_gc> *params,
 			 vec<tree, va_gc> *origtypes)
 {
-  /* MISRA-C Rule 21.21: 禁用標準函式 system() */
+  /* MISRA C:2025 Rule 21.21: 禁用標準函式 system() */
   {
     tree target = NULL_TREE;
     /* 直接呼叫：function 是 FUNCTION_DECL */
@@ -3493,7 +3497,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
           warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 21.21");
       }
   }
-  /* —— MISRA-C Rule 21.24：禁用 rand / srand —— */
+  /* —— MISRA C:2025 Rule 21.24：禁用 rand / srand —— */
   {
     tree target = NULL_TREE;
     if (function && TREE_CODE (function) == FUNCTION_DECL)
@@ -3511,7 +3515,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
       }
   }
 
-  /* —— MISRA-C Rule 1.4：禁止 Annex K 函式 —— */
+  /* —— MISRA C:2025 Rule 1.4：禁止 Annex K 函式 —— */
   {
     tree target = NULL_TREE;
 
@@ -3604,7 +3608,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
   fntype = TREE_TYPE (fntype);
   /* Convert the parameters to the types declared in the
      function prototype, or apply default promotions.  */
- /* —— MISRA-C Rule 21.22：在參數被轉換之前檢查 —— */
+ /* —— MISRA C:2025 Rule 21.22：在參數被轉換之前檢查 —— */
   {
     /* 解析被呼叫目標（直接或 &f 取址）。 */
     tree callee = NULL_TREE;
@@ -3652,7 +3656,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
     }
   }
   
-  /* —— MISRA-C Rule 21.23：<tgmath.h> 多參數型別泛型巨集之運算元型別需一致 —— */
+  /* —— MISRA C:2025 Rule 21.23：<tgmath.h> 多參數型別泛型巨集之運算元型別需一致 —— */
   {
     /* 解析被呼叫目標（直接或 &f 取址）。 */
     tree callee = NULL_TREE;
@@ -3713,7 +3717,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
           }
       }
   }
-/* —— MISRA-C Rule 21.25：所有記憶體同步操作必須使用 memory_order_seq_cst —— */
+/* —— MISRA C:2025 Rule 21.25：所有記憶體同步操作必須使用 memory_order_seq_cst —— */
 {
   /* 找出被呼叫的目標（直接或 &f）。 */
   tree callee = fundecl;
@@ -3953,7 +3957,7 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
 }
 
 
-  /* —— MISRA-C Rule 21.26：mtx_timedlock 只能用在含 mtx_timed 的 mutex —— */
+  /* —— MISRA C:2025 Rule 21.26：mtx_timedlock 只能用在含 mtx_timed 的 mutex —— */
 {
   misra_mtx_clear_if_new_func ();
 
@@ -4558,26 +4562,36 @@ convert_arguments (location_t loc, vec<location_t> arg_loc, tree typelist,
     strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"va_start") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"va_end") ==0||
     strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"va_copy") ==0)
     	{
-	    	inform(loc,"MISRA C:2025 Rule 17.1\n");
+	    	inform(loc,"\n==========================MISRA C:2025 Rule 17.1==========================\n"
+	    	"Rule 17.1:The features of <stdarg.h> shall not be used\n"
+		    "Category: Required\n");
 	    }
 			 if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"malloc") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"calloc") ==0||
     strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"realloc") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"free") ==0)
       {
-	       inform(loc,"MISRA C:2025 Rule 21.3\n");
+	       inform(loc,"\n==========================MISRA C:2025 Rule 21.3==========================\n"
+		    "Rule 21.3:The memory allocation and deallocation functions of <stdlib.h>shall not be used\n"
+	    	"Category: Required\n");
 	    }
   			if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atof") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atoi") ==0||
      strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atol") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"atoll") ==0)
         {
-	       inform(loc,"MISRA C:2025 Rule 21.7\n");
+	       inform(loc,"\n==========================MISRA C:2025 Rule 21.7==========================\n"
+		    "Rule 21.7:The atof, atoi, atol and atoll functions of <stdlib.h> shall not be used\n"
+	    	"Category: Required\n");
 	       }
   			if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"abort") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"exit") ==0||
      strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"getenv") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"system") ==0)
           {
-	       inform(loc,"MISRA C:2025 Rule 21.8\n");
+	       inform(loc,"\n==========================MISRA C:2025 Rule 21.8==========================\n"
+		    "Rule 21.8:The library functions abort, exit, getenv and system of <stdlib.h> shall not be used\n"
+	    	"Category: Required\n");
 	         }
  			if(strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"bsearch") ==0||strcmp(IDENTIFIER_POINTER(DECL_NAME(fundecl)),"qsort") ==0)
         {
-	       inform(loc,"MISRA C:2025 Rule 21.9\n");
+	       inform(loc,"\n==========================MISRA C:2025 Rule 21.9==========================\n"
+		    "Rule 21.9:The library functions bsearch and qsort of <stdlib.h> shall not be used\n"
+	    	"Category: Required\n");
 	      }
 	}
 }
@@ -5333,7 +5347,7 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       /* This is used for unary plus, because a CONVERT_EXPR
 	 is enough to prevent anybody from looking inside for
 	 associativity, but won't generate any code.  */
-      // MISRA-C Rule 10.1 Rationale 3, 4, 5
+      // MISRA C:2025 Rule 10.1 Rationale 3, 4, 5
       /* Originally used xarg->typed.type->type_common.precision to check but it will become inaccurate when encountering type promotion,
  * 	 First check Bool type and Enum type, second check char(small int type), third check const char */
       if (Wmisra_c_trigger) {
@@ -5354,7 +5368,7 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
 	arg = default_conversion (arg);
       arg = non_lvalue_loc (location, arg);
       break;
-    // MISRA-C Rule 10.1 Rationale 3, 4, 5, 8
+    // MISRA C:2025 Rule 10.1 Rationale 3, 4, 5, 8
     // First check Bool type and Enum type, second check char(small int type), third check const char, last check unsigned int type
     case NEGATE_EXPR:
       if (Wmisra_c_trigger) {
@@ -5375,7 +5389,7 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       else if (!noconvert)
 	arg = default_conversion (arg);
       break;
-    // MISRA-C Rule 10.1 Rationale 3, 4, 5, 6, 1 (Only unsigned int is not in the specification of this operator).
+    // MISRA C:2025 Rule 10.1 Rationale 3, 4, 5, 6, 1 (Only unsigned int is not in the specification of this operator).
     case BIT_NOT_EXPR:
       if (Wmisra_c_trigger) {
       	if (xarg->typed.type->base.code == INTEGER_TYPE && !xarg->typed.type->base.u.bits.unsigned_flag) {
@@ -5442,7 +5456,7 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
       else if (!noconvert)
 	arg = default_conversion (arg);
       break;
-    // MISRA-C Rule 10.1 Rationale 2 (Only Bool type is not in the specification of this operator).
+    // MISRA C:2025 Rule 10.1 Rationale 2 (Only Bool type is not in the specification of this operator).
     case TRUTH_NOT_EXPR:
       if (Wmisra_c_trigger) {
         if (xarg->typed.type->base.code != BOOLEAN_TYPE) {
@@ -5503,7 +5517,10 @@ build_unary_op (location_t location, enum tree_code code, tree xarg,
 
 	/*if((code == PREINCREMENT_EXPR|| code == POSTINCREMENT_EXPR) && Wmisra_c_trigger)
   	{
-		inform(location,"MISRA C:2025 Rule 13.3\n");
+		inform(location,"\n==========================MISRA C:2025 Rule 13.3==========================\n"
+		"Rule 13.3:full expression containing an increment (++) or decrement (--)operator should have no other potential side ffects"
+     "other than that caused by the increment or decrement operator\n"
+		"Category: Advisory\n");
 	  }*/
 
       if (!objc_is_property_ref (arg)
@@ -6698,7 +6715,7 @@ build_c_cast (location_t loc, tree type, tree expr)
       	const wide_int_ref &num=value;
       	tree type1=type;
       	tree type2=otype;
-      	// Misra Rule 11
+      	// MISRA C:2025 Rule 11
       	int i;
       	int warning_flag[9]; // warning_flag[num] ==> Rule 11.(num+1)
       	if(TREE_CODE(type1)==POINTER_TYPE)
@@ -6832,7 +6849,7 @@ build_c_cast (location_t loc, tree type, tree expr)
 		warning_flag[7]=1;
       for(i=0;i<9;i++)
 		if(warning_flag[i]==1&&loc)
-			inform(loc,"Rule 11.%d violation",i+1);
+			inform(loc,"MISRA C:2025 Rule 11.%d",i+1);
 	}
       /* Optionally warn about potentially worrisome casts.  */
       if (warn_cast_qual
@@ -7039,7 +7056,7 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 		   enum tree_code modifycode,
 		   location_t rhs_loc, tree rhs, tree rhs_origtype)
 {
-  /* ---- MISRA-C Rule 18.9 : write to element of temporary array ---- */
+  /* ---- MISRA C:2025 Rule 18.9 : write to element of temporary array ---- */
   {
   tree lv = lhs;                       /* lhs 就是 tree */
 
@@ -7230,7 +7247,10 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 	if((treecode_13_3 == PREINCREMENT_EXPR|| treecode_13_3 == PREDECREMENT_EXPR\
 || treecode_13_3 == POSTINCREMENT_EXPR|| treecode_13_3 == POSTDECREMENT_EXPR) && Wmisra_c_trigger)
     	{
-		inform(location,"MISRA C:2025 Rule 13.3\n");
+		inform(location,"\n==========================MISRA C:2025 Rule 13.3==========================\n"
+		"Rule 13.3:full expression containing an increment (++) or decrement (--)operator should have no other potential side ffects"
+     "other than that caused by the increment or decrement operator\n"
+		"Category: Advisory\n");
 	  }		
 //////////////////////////////////////////////////////////////////13.3end///////////////////////////////////////////////////////////////////////
 
@@ -8015,22 +8035,22 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 		       & ~TYPE_QUALS_NO_ADDR_SPACE (ttl)) {
 		PEDWARN_FOR_QUALIFIERS (location, expr_loc,
                                         OPT_Wdiscarded_qualifiers,
-                                        G_("MISRA C:2025 Rule 7.4\npassing argument %d of %qE discards "
+                                        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
                                            "%qv qualifier from pointer target type"),
                                         G_("assignment discards %qv qualifier "
                                            "from pointer target type"),
-                                        G_("MISRA C:2025 Rule 7.4\ninitialization discards %qv qualifier "
+                                        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
                                            "from pointer target type"),
                                         G_("return discards %qv qualifier from "
                                            "pointer target type"),
                                         TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		PEDWARN_FOR_QUALIFIERS (location, expr_loc,
 				        OPT_Wdiscarded_qualifiers,
-				        G_("MISRA C:2025 Rule 7.4\npassing argument %d of %qE discards "
+				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
 					   "%qv qualifier from pointer target type"),
 				        G_("assignment discards %qv qualifier "
 					   "from pointer target type"),
-				        G_("MISRA C:2025 Rule 7.4\ninitialization discards %qv qualifier "
+				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
 					   "from pointer target type"),
 				        G_("return discards %qv qualifier from "
 					   "pointer target type"),
@@ -8193,11 +8213,11 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 		  & ~TYPE_QUALS_NO_ADDR_SPACE_NO_ATOMIC (ttl)) {
 		WARNING_FOR_QUALIFIERS (location, expr_loc,
 				        OPT_Wdiscarded_qualifiers,
-				        G_("MISRA C:2025 Rule 7.4\npassing argument %d of %qE discards "
+				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
 					   "%qv qualifier from pointer target type"),
 				        G_("assignment discards %qv qualifier "
 					   "from pointer target type"),
-				        G_("MISRA C:2025 Rule 7.4\ninitialization discards %qv qualifier "
+				        G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
 					   "from pointer target type"),
 				        G_("return discards %qv qualifier from "
 					   "pointer target type"),
@@ -8238,13 +8258,13 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 
 		  PEDWARN_FOR_QUALIFIERS (location, expr_loc,
 				          OPT_Wdiscarded_qualifiers,
-				          G_("MISRA C:2025 Rule 7.4\npassing argument %d of %qE discards "
+				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\npassing argument %d of %qE discards "
 					     "%qv qualifier from pointer target type"),
-				          G_("MISRA C:2025 Rule 7.4\nassignment discards %qv qualifier "
+				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\nassignment discards %qv qualifier "
 					     "from pointer target type"),
-				          G_("MISRA C:2025 Rule 7.4\ninitialization discards %qv qualifier "
+				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\ninitialization discards %qv qualifier "
 					     "from pointer target type"),
-				          G_("MISRA C:2025 Rule 7.4\nreturn discards %qv qualifier from "
+				          G_("==========================MISRA C:2025 Rule 7.4==========================\nRule 7.4 A string literal shall not be assigned to an object unless the object’s type is “pointer to const-qualified char\nCategory: Required\nreturn discards %qv qualifier from "
 					     "pointer target type"),
 				          TYPE_QUALS (ttr) & ~TYPE_QUALS (ttl));
 		}
@@ -9059,7 +9079,7 @@ struct constructor_stack
   char incremental;
   char designated;
   int designator_depth;
-  /* MISRA-C Rule 9.6 per-level state */
+  /* MISRA C:2025 Rule 9.6 per-level state */
   bool misra_96_has_chained;       /* any element at this level with designator_depth > 1 */
   bool misra_96_has_designated;    /* any element at this level with designator_depth >= 1 */
   bool misra_96_has_positional;    /* any element at this level with designator_depth == 0 */
@@ -9492,7 +9512,9 @@ push_init_level (location_t loc, int implicit,
 	initializer_stack->missing_brace_richloc->add_fixit_insert_before
 	  (loc, "{");
       if( Wmisra_c_trigger )    	
-		    inform(loc,"MISRA C:2025 Rule 9.2\n");}
+		    inform(loc,"\n==========================MISRA C:2025 Rule 9.2==========================\n"
+		    "Rule 9.2:The initializer for an aggregate or union shall be enclosed in braces\n"
+		    "Category: Required\n");}
 	    
 
     }
@@ -9885,7 +9907,9 @@ void misra_c_9_4(tree array_index,location_t loc)
 	 	for(int i=0;i<array_index_vec.length();i++)
 	 	{
 	 		if(TREE_INT_CST_ELT(array_index, 0)==array_index_vec[i]){ 	
-				inform(loc,"MISRA C:2025 Rule 9.4\n");
+				inform(loc,"\n==========================MISRA C:2025 Rule 9.4==========================\n"
+				"Rule 9.4:An element of an object shall not be initialized more than once\n"
+				"Category: Required\n");
 				 warning = 1;}
 	 	}
 	 }
@@ -10906,7 +10930,7 @@ void
 process_init_element (location_t loc, struct c_expr value, bool implicit,
 		      struct obstack * braced_init_obstack)
 {
-  /* MISRA-C Rule 9.6: per-level tracking.
+  /* MISRA C:2025 Rule 9.6: per-level tracking.
      Only check user-written elements (not implicit zero-fill from pop_init_level). */
   if (!implicit && constructor_stack)
     {
@@ -11669,7 +11693,7 @@ c_finish_return (location_t loc, tree retval, tree origtype)
 	  if (flag_isoc99) {
 	    warned_here = pedwarn
 	      (loc, 0,
-	       "%<return%> with no value, in function returning non-void also break Misra-c Rule 17.4\n");
+	       "%<return%> with no value, in function returning non-void also break MISRA C:2025 Rule 17.4\n");
 	  } else
 	    warned_here = warning_at
 	      (loc, OPT_Wreturn_type,
@@ -11906,7 +11930,7 @@ c_start_case (location_t switch_loc,
   cs->orig_type = orig_type;
   cs->cases = splay_tree_new (case_compare, NULL, NULL);
   cs->bindings = c_get_switch_bindings ();
-  // MISRA-C Rule 16.2
+  // MISRA C:2025 Rule 16.2
   // misra_temp_bindings = cs->bindings;
   // misra_depth_case_16_2 = misra_temp_bindings->scope->depth;
   // invalid use of incomplete type ‘struct c_spot_bindings’ ????
@@ -12751,7 +12775,7 @@ build_binary_op (location_t location, enum tree_code code,
   switch (code)
     {
     case PLUS_EXPR:
-      // MISRA-C Rule 10.1 Rationale 3, 5
+      // MISRA C:2025 Rule 10.1 Rationale 3, 5
       if (Wmisra_c_trigger) {
         if (orig_op0->typed.type->base.code == BOOLEAN_TYPE || orig_op0->typed.type->base.code == ENUMERAL_TYPE ||
 	    orig_op1->typed.type->base.code == BOOLEAN_TYPE || orig_op1->typed.type->base.code == ENUMERAL_TYPE) {

@@ -81,13 +81,13 @@ struct macro_arg
 					  stored.  */
 };
 
-/* === MISRA-C Rule 7.5 / 7.6 helper prototype === */
+/* === MISRA C:2025 Rule 7.5 / 7.6 helper prototype === */
 static void misra_check_integer_constant_macro_arg (cpp_reader *pfile,
                                                     cpp_hashnode *node,
                                                     cpp_macro *macro,
                                                     macro_arg *args,
                                                     source_location invoc_loc);
-/* === end MISRA-C Rule 7.5 / 7.6 helper prototype === */
+/* === end MISRA C:2025 Rule 7.5 / 7.6 helper prototype === */
 
 
 /* The kind of macro tokens which the instance of
@@ -1231,12 +1231,12 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
 	      pfile->about_to_expand_macro_p = false;
 	      return 0;
 	    }
-    /* === MISRA-C Rule 7.5 / 7.6: 檢查 integer constant macro 的實參與使用 === */
+    /* === MISRA C:2025 Rule 7.5 / 7.6: 檢查 integer constant macro 的實參與使用 === */
     if (macro->paramc > 0)
       misra_check_integer_constant_macro_arg (pfile, node, macro,
                                               (macro_arg *) buff->base,
                                               location);
-    /* === MISRA-C Rule 7.5 / 7.6: 結束 === */
+    /* === MISRA C:2025 Rule 7.5 / 7.6: 結束 === */
 
 	  if (macro->paramc > 0)
 	    replace_args (pfile, node, macro,
@@ -1625,7 +1625,7 @@ expanded_token_index (cpp_reader *pfile, cpp_macro *macro,
   return cur_replacement_token - macro->exp.tokens;
 }
 
-/* === MISRA-C Rule 7.5 implementation ==================================== */
+/* === MISRA C:2025 Rule 7.5 implementation ==================================== */
 
 /* 簡單判斷這個宏是不是 INTn_C / UINTn_C 類型。
    目前僅支援 INT8/16/32/64_C 和 UINT8/16/32/64_C，你可以照需求再擴充。 */
@@ -1685,7 +1685,7 @@ misra_get_intconst_macro_info (const unsigned char *uname,
 
   return false;
 }
-/* === MISRA-C Rule 7.6: 取得 int 的位元寬度 ======================= */
+/* === MISRA C:2025 Rule 7.6: 取得 int 的位元寬度 ======================= */
 /* 目前先假設 target 為 32-bit int。
    如果之後你想做成跟 target 設定一致，可以改成：
 
@@ -1704,7 +1704,7 @@ misra_get_int_type_width (cpp_reader *pfile)
   (void) pfile;
   return 32;
 }
-/* === end MISRA-C Rule 7.6 helper ================================= */
+/* === end MISRA C:2025 Rule 7.6 helper ================================= */
 
 
 /* 檢查一個 token 是否是「沒 suffix 的整數字面常數」，並回傳其數值。
@@ -1864,7 +1864,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
 
   /* 之後要印字串才用 name（const char *） */
   name = (const char *) uname;
-  /* === MISRA-C Rule 7.6: 禁用小整數變體的 minimum-width integer constant macros ===
+  /* === MISRA C:2025 Rule 7.6: 禁用小整數變體的 minimum-width integer constant macros ===
      small integer = 位元寬度 < int 寬度。 */
   {
     unsigned int_bits = misra_get_int_type_width (pfile);
@@ -1934,7 +1934,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
     }
 }
 
-/* === end MISRA-C Rule 7.5 implementation ================================ */
+/* === end MISRA C:2025 Rule 7.5 implementation ================================ */
 
 /* Replace the parameters in a function-like macro of NODE with the
    actual ARGS, and place the result in a newly pushed token context.
@@ -3692,7 +3692,7 @@ _cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
 				      "\"%s\" redefined", NODE_NAME (node));
       // if(ustrcmp(NODE_NAME(node), (const uchar *)"__FILE__") == 0 && CPP_OPTION(pfile, Wmisra_cpp_trigger))
       //   cpp_warning (pfile, CPP_DL_NOTE,
-			//   "\n==========================Misra-c 2012 rule violation:21.1==========================\n"\
+			//   "\n==========================MISRA C:2025 Rule 21.1==========================\n"\
 		  //   "Rule 21.1:#define and #undefine shall not be used on a reserved identifier or reserved macro name\n"\
 		  //   "Category:  Required\n"
       //   "Analysis:  Decidable, Single Translation Unit");

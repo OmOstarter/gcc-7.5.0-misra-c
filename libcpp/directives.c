@@ -539,7 +539,7 @@ _cpp_handle_directive (cpp_reader *pfile, int indented)
 	misra_20_13 = (char *)cpp_token_as_text(pfile, dname);
     }
   if (misra_20_13 && CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
-	cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.13\n");	
+	cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.13\n");	
   }  
 
   pfile->directive = dir;
@@ -624,7 +624,7 @@ lex_macro_node (cpp_reader *pfile, bool is_def_or_undef)
           ||ustrcmp(NODE_NAME(node) , (const uchar *)"defined") == 0  || ustrcmp(NODE_NAME(node) , (const uchar *)"errno") == 0 )
         
         cpp_warning (pfile, CPP_DL_NOTE,
-			  "MISRA C:2025 Rule 20.15\n");            //misra-c 20.15 (was 21.1 in MISRA C:2012)
+			  "MISRA C:2025 Rule 20.15");            //misra-c 21,01
       if (is_def_or_undef && node == pfile->spec_nodes.n_defined)
 	cpp_error (pfile, CPP_DL_ERROR,
 		   "\"defined\" cannot be used as a macro name");
@@ -689,7 +689,7 @@ do_define (cpp_reader *pfile)
 	if (*misra_tmp_macro_name >= 'a' && *misra_tmp_macro_name <= 'z') {
         	for (int i = 0; i < c_keyword_number; i++) {
                 	if (!misra_compare_string((char *)misra_tmp_c_keyword[i], misra_tmp_macro_name)) {	
-				cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.4\n");
+				cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.4\n");
                 	}
         	}
   	}
@@ -699,8 +699,8 @@ do_define (cpp_reader *pfile)
 	if (*misra_tmp_macro_name != '_')
 	while (*misra_macro_20_10) {
 		if (*misra_macro_20_10 == '#' && *(misra_macro_20_10 + 1) && *(misra_macro_20_10 + 1) == '#') {
-			//cpp_error_with_line (pfile, CPP_DL_NOTE, pfile->directive_line, 0, "Misra-C Rule 20.10\n");
-			cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.10\n");	
+			//cpp_error_with_line (pfile, CPP_DL_NOTE, pfile->directive_line, 0, "MISRA C:2025 Rule 20.10\n");
+			cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.10\n");	
 		} else if (*misra_macro_20_10 == '\n') {
 			break;
 		}
@@ -711,7 +711,7 @@ do_define (cpp_reader *pfile)
   if (*misra_tmp_macro_name != '_') {
 	for (int i = 0; i < c_keyword_number; i++) {
 		if (!misra_compare_string(misra_tmp_c_keyword[i], misra_tmp_macro_name)) {
-			cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.4\n");
+			cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.4\n");
 		}
 	}	
   }
@@ -743,7 +743,11 @@ do_undef (cpp_reader *pfile)
   cpp_hashnode *node = lex_macro_node (pfile, true);
 								//misra 20.5
   if(CPP_OPTION(pfile,Wmisra_cpp_trigger))
-  cpp_pedwarning (pfile,CPP_W_NONE,"MISRA C:2025 Rule 20.5\n");
+  cpp_pedwarning (pfile,CPP_W_NONE,"\n================================MISRA C:2025 Rule 20.5================================\n"\
+		"Rule 20.5:#undef should not be used\n"\
+		"Category:  Advisory\n"\
+		"Analysis:  Decidable, Single translation unit\n"
+		"Allpies to:C90, C99\n");
   if (node)
     {
       if (pfile->cb.before_define)
@@ -864,12 +868,12 @@ parse_include (cpp_reader *pfile, int *pangle_brackets,
 {
   char *fname;
   const cpp_token *header;
-  char *misra_c_tmp_fname;    // for Misra-C Rule 20.2
-  char *misra_c_tmp_header_text; // for Misra-C Rule 20.3
+  char *misra_c_tmp_fname;    // for MISRA C:2025 Rule 20.2
+  char *misra_c_tmp_header_text; // for MISRA C:2025 Rule 20.3
   /*
-  char *misra_c_check_header_21_3; // for Misra-C Rule 21.3
-  char *misra_c_check_header_21_4; // for Misra-C Rule 21.4
-  char *misra_c_check_header_21_5; // for Misra-C Rule 21.5
+  char *misra_c_check_header_21_3; // for MISRA C:2025 Rule 21.3
+  char *misra_c_check_header_21_4; // for MISRA C:2025 Rule 21.4
+  char *misra_c_check_header_21_5; // for MISRA C:2025 Rule 21.5
   char *misra_c_check_header_21_7_8;
   */
   /* Allow macro expansion.  */
@@ -896,7 +900,7 @@ parse_include (cpp_reader *pfile, int *pangle_brackets,
       if (*misra_c_tmp_header_text == '"' || *misra_c_tmp_header_text == '<') {
           ;  // correct
       } else if (CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
-          cpp_warning_with_line(pfile, CPP_W_NONE, *location, 0, "Misra-C Rule 20.3\n");
+          cpp_warning_with_line(pfile, CPP_W_NONE, *location, 0, "MISRA C:2025 Rule 20.3\n");
       }
       if (pfile->directive == &dtable[T_PRAGMA])
 	dir = UC"pragma dependency";
@@ -931,24 +935,24 @@ parse_include (cpp_reader *pfile, int *pangle_brackets,
 	    *misra_c_tmp_fname == '\'' || 
 	    *misra_c_tmp_fname == '"') {
 		if (CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
-			cpp_pedwarning(pfile, CPP_W_NONE, "Misra-C Rule 20.2\n");
-			//cpp_warning_with_line(pfile, CPP_W_NONE, *location, 0, "Misra-C Rule 20.2\n");
+			cpp_pedwarning(pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.2\n");
+			//cpp_warning_with_line(pfile, CPP_W_NONE, *location, 0, "MISRA C:2025 Rule 20.2\n");
 		}	
 	}
 	misra_c_tmp_fname++;
   }
   /*
-  if (!compare_misra_header_string(misra_c_check_header_21_3, "<stdlib.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // Misra-C Rule 21.3
-	cpp_pedwarning(pfile, CPP_W_NONE, "Misra-C Rule 21.3\n");
+  if (!compare_misra_header_string(misra_c_check_header_21_3, "<stdlib.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // MISRA C:2025 Rule 21.3
+	cpp_pedwarning(pfile, CPP_W_NONE, "MISRA C:2025 Rule 21.3\n");
   }
-  if (!compare_misra_header_string(misra_c_check_header_21_4, "<setjmp.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // Misra-C Rule 21.4
-	cpp_pedwarning(pfile, CPP_W_NONE, "Misra-C Rule 21.4\n");
+  if (!compare_misra_header_string(misra_c_check_header_21_4, "<setjmp.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // MISRA C:2025 Rule 21.4
+	cpp_pedwarning(pfile, CPP_W_NONE, "MISRA C:2025 Rule 21.4\n");
   }
-  if (!compare_misra_header_string(misra_c_check_header_21_5, "<signal.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // Misra-C Rule 21.5
-        cpp_pedwarning(pfile, CPP_W_NONE, "Misra-C Rule 21.5\n");
+  if (!compare_misra_header_string(misra_c_check_header_21_5, "<signal.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // MISRA C:2025 Rule 21.5
+        cpp_pedwarning(pfile, CPP_W_NONE, "MISRA C:2025 Rule 21.5\n");
   }
-  if (!compare_misra_header_string(misra_c_check_header_21_7_8, "<stdlib.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // Misra-C Rule 21.7 / 8
-        cpp_pedwarning(pfile, CPP_W_NONE, "Misra-C Rule 21.7 & Misra-C Rule 21.8\n");
+  if (!compare_misra_header_string(misra_c_check_header_21_7_8, "<stdlib.h>") && CPP_OPTION(pfile, Wmisra_cpp_trigger)) { // MISRA C:2025 Rule 21.7 / 8
+        cpp_pedwarning(pfile, CPP_W_NONE, "MISRA C:2025 Rule 21.7 & MISRA C:2025 Rule 21.8\n");
   }
   */
   return fname;
@@ -2201,7 +2205,7 @@ do_else (cpp_reader *pfile)
   cpp_buffer *buffer = pfile->buffer;
   struct if_stack *ifs = buffer->if_stack;
   if (ifs == NULL) {
-    cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.14\n");
+    cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
   }
   if (ifs == NULL)
     cpp_error (pfile, CPP_DL_ERROR, "#else without #if");
@@ -2236,7 +2240,7 @@ do_elif (cpp_reader *pfile)
   cpp_buffer *buffer = pfile->buffer;
   struct if_stack *ifs = buffer->if_stack;
   if (ifs == NULL) {
-    cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.14\n");
+    cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
   }
   if (ifs == NULL)
     cpp_error (pfile, CPP_DL_ERROR, "#elif without #if");
@@ -2274,10 +2278,10 @@ do_endif (cpp_reader *pfile)
   cpp_buffer *buffer = pfile->buffer;
   struct if_stack *ifs = buffer->if_stack;
   if (ifs == NULL) {
-    cpp_pedwarning (pfile, CPP_W_NONE, "Misra-C Rule 20.14\n");
+    cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
   }
   if (ifs == NULL)
-    cpp_error (pfile, CPP_DL_ERROR, "#endif without #if Misra-C Rule 20.14\n");
+    cpp_error (pfile, CPP_DL_ERROR, "#endif without #if MISRA C:2025 Rule 20.14\n");
   else
     {
       /* Only check EOL if was not originally skipping.  */
@@ -2797,7 +2801,7 @@ _cpp_pop_buffer (cpp_reader *pfile)
      entry to this file, issuing error messages.  */
   for (ifs = buffer->if_stack; ifs; ifs = ifs->next)
     cpp_error_with_line (pfile, CPP_DL_ERROR, ifs->line, 0,
-			 "unterminated #%s Misra-C Rule 20.14\n", dtable[ifs->type].name);
+			 "unterminated #%s MISRA C:2025 Rule 20.14\n", dtable[ifs->type].name);
 
   /* In case of a missing #endif.  */
   pfile->state.skipping = 0;

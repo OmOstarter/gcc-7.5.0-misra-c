@@ -1422,7 +1422,7 @@ unsafe_conversion_p (location_t loc, tree type, tree expr, bool produce_warns)
 	  */
 	  if (TYPE_PRECISION (type) < TYPE_PRECISION (expr_type)) {
 	    //if(OPT_Wmisra_c)	
-	    //	inform(loc, "Misra-C Rule 10.3\n");
+	    //	inform(loc, "MISRA C:2025 Rule 10.3\n");
 	    give_warning = UNSAFE_OTHER;
 	  }
 	  if (((TYPE_PRECISION (type) != TYPE_PRECISION (expr_type)

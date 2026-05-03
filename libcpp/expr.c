@@ -592,7 +592,7 @@ cpp_classify_number (cpp_reader *pfile, const cpp_token *token,
           str-=2;
 	  if ((radix == 8 && c != '.' && !misra_flags_check_Decimal_point)) {
 		if (((*str != '0' && *str < '9')) && CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
-			SYNTAX_WARNING_AT(virtual_location, "MISRA C:2025 Rule 7.1\n");		
+			SYNTAX_WARNING_AT(virtual_location, "\n==========================MISRA C:2025 Rule 7.1==========================\nRule 7.1 Octal constants shall not be used\nCategory: Required\n");		
 		}
 	  }
 	  str++;
@@ -610,7 +610,7 @@ cpp_classify_number (cpp_reader *pfile, const cpp_token *token,
       result = interpret_float_suffix (pfile, str, limit - str);
       if (lowercase_l_suffix && CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
                 lowercase_l_suffix = 0;
-                SYNTAX_WARNING_AT2(virtual_location, "MISRA C:2025 Rule 7.3\n");
+                SYNTAX_WARNING_AT2(virtual_location, "\n==========================MISRA C:2025 Rule 7.3==========================\nRule 7.3 The lowercase character 'l' shall not be used in a literal suffix\nCategory: Required\n");
                 lowercase_l_suffix = 0; // May become invalid after the warning is finished
         }
       if ((result & CPP_N_FRACT) || (result & CPP_N_ACCUM))
@@ -772,7 +772,7 @@ cpp_classify_number (cpp_reader *pfile, const cpp_token *token,
         	if (*str == 'U' || *str == 'u')
 			misra_check_rule_7_2 = 0;
         	else {
-			//SYNTAX_WARNING_AT(virtual_location, "Misra-c Rule 7.2");
+			//SYNTAX_WARNING_AT(virtual_location, "MISRA C:2025 Rule 7.2");
 			misra_check_rule_7_2 = 1;
 			misra_rule_7_2_location = virtual_location;
 		}
@@ -1192,7 +1192,7 @@ eval_token (cpp_reader *pfile, const cpp_token *token,
 	  result.high = 0;
 	  result.low = 0;
 	  if (CPP_OPTION(pfile , Wmisra_cpp_trigger) && !pfile->state.skip_eval) {
-        	SYNTAX_WARNING_AT(virtual_location, "Misra-C Rule 20.9\n");
+        	SYNTAX_WARNING_AT(virtual_location, "MISRA C:2025 Rule 20.9\n");
   	  }
 	  if (CPP_OPTION (pfile, warn_undef) && !pfile->state.skip_eval)
 	    cpp_warning_with_line (pfile, CPP_W_UNDEF, virtual_location, 0,
@@ -1451,7 +1451,7 @@ _cpp_parse_expr (cpp_reader *pfile, bool is_if)
   if (top->value.low == 1 || top->value.low == 0) {
         ;
   } else if (CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
-        SYNTAX_WARNING_AT(pfile->directive_line, "Misra-C Rule 20.8\n");
+        SYNTAX_WARNING_AT(pfile->directive_line, "MISRA C:2025 Rule 20.8\n");
   }
   /* The controlling macro expression is only valid if we called lex 3
      times: <!> <defined expression> and <EOF>.  push_conditional ()
@@ -1472,8 +1472,8 @@ _cpp_parse_expr (cpp_reader *pfile, bool is_if)
 	;
   } else if (CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
 	cpp_error_with_line (pfile, CPP_DL_NOTE, top->loc, 0,
-                           "Misra-C Rule 20.8\n");
-	//SYNTAX_WARNING_AT(top->loc, "Misra-C Rule 20.8\n");	
+                           "MISRA C:2025 Rule 20.8\n");
+	//SYNTAX_WARNING_AT(top->loc, "MISRA C:2025 Rule 20.8\n");	
   }
   */
   return !num_zerop (top->value);
