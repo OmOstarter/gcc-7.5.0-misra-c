@@ -12235,6 +12235,27 @@ c_process_expr_stmt (location_t loc, tree expr)
       && warn_unused_value)
     emit_side_effect_warnings (EXPR_LOC_OR_LOC (expr, loc), expr);
 
+  /* MISRA C:2025 Rule 17.7: non-void function return value shall be used.
+     Warn when the expression statement is a call whose return value is not
+     explicitly discarded with a (void) cast. Strip non-void casts first;
+     stop at a void cast (the approved way to discard a return value).  */
+  if (Wmisra_c_trigger && !STATEMENT_LIST_STMT_EXPR (cur_stmt_list))
+    {
+      tree inner = expr;
+      while (CONVERT_EXPR_P (inner) && !VOID_TYPE_P (TREE_TYPE (inner)))
+	inner = TREE_OPERAND (inner, 0);
+      if (TREE_CODE (inner) == CALL_EXPR
+	  && !VOID_TYPE_P (TREE_TYPE (inner)))
+	{
+	  tree fn = CALL_EXPR_FN (inner);
+	  if (TREE_CODE (fn) == ADDR_EXPR)
+	    fn = TREE_OPERAND (fn, 0);
+	  if (!DECL_P (fn) || !DECL_IN_SYSTEM_HEADER (fn))
+	    warning_at (EXPR_LOC_OR_LOC (inner, loc),
+		       OPT_Wmisra_c, "MISRA C:2025 Rule 17.7");
+	}
+    }
+
   exprv = expr;
   while (TREE_CODE (exprv) == COMPOUND_EXPR)
     exprv = TREE_OPERAND (exprv, 1);
