@@ -4950,6 +4950,106 @@ misra_10_6_composite_result_type (enum tree_code code, tree type1, tree type2)
   return misra_10_6_wider_type (type1, type2);
 }
 
+static bool
+misra_10_7_uses_usual_arithmetic_conversions (enum tree_code code)
+{
+  switch (code)
+    {
+    case PLUS_EXPR:
+    case MINUS_EXPR:
+    case MULT_EXPR:
+    case TRUNC_DIV_EXPR:
+    case CEIL_DIV_EXPR:
+    case FLOOR_DIV_EXPR:
+    case ROUND_DIV_EXPR:
+    case EXACT_DIV_EXPR:
+    case TRUNC_MOD_EXPR:
+    case CEIL_MOD_EXPR:
+    case FLOOR_MOD_EXPR:
+    case ROUND_MOD_EXPR:
+    case LT_EXPR:
+    case LE_EXPR:
+    case GT_EXPR:
+    case GE_EXPR:
+    case EQ_EXPR:
+    case NE_EXPR:
+    case BIT_IOR_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_AND_EXPR:
+      return true;
+
+    default:
+      return false;
+    }
+}
+
+static bool
+misra_10_7_real_complex_pair (enum misra_10_3_category cat1,
+			      enum misra_10_3_category cat2)
+{
+  return (cat1 == MISRA_10_3_REAL && cat2 == MISRA_10_3_COMPLEX)
+    || (cat1 == MISRA_10_3_COMPLEX && cat2 == MISRA_10_3_REAL);
+}
+
+static bool
+misra_10_7_other_operand_is_wider (tree composite_type, tree other_type)
+{
+  enum misra_10_3_category composite_cat;
+  enum misra_10_3_category other_cat;
+
+  if (!composite_type || !other_type)
+    return false;
+
+  composite_type = TYPE_MAIN_VARIANT (composite_type);
+  other_type = TYPE_MAIN_VARIANT (other_type);
+  composite_cat = misra_10_3_category_of_type (composite_type);
+  other_cat = misra_10_3_category_of_type (other_type);
+
+  if (composite_cat == MISRA_10_3_OTHER
+      || other_cat == MISRA_10_3_OTHER
+      || misra_10_7_real_complex_pair (composite_cat, other_cat)
+      || composite_cat != other_cat)
+    return false;
+
+  return misra_10_3_type_rank (other_type) > misra_10_3_type_rank (composite_type);
+}
+
+static bool
+misra_10_7_expr_is_composite (struct c_expr expr)
+{
+  return misra_10_6_is_composite_operator (expr.original_code)
+    && expr.original_type;
+}
+
+static void
+misra_10_7_maybe_warn_binary (location_t location, enum tree_code code,
+			      struct c_expr arg1, tree type1,
+			      struct c_expr arg2, tree type2)
+{
+  if (!Wmisra_c_trigger
+      || !misra_10_7_uses_usual_arithmetic_conversions (code))
+    return;
+
+  if (misra_10_7_expr_is_composite (arg1)
+      && misra_10_7_other_operand_is_wider (arg1.original_type, type2))
+    warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 10.7");
+
+  if (misra_10_7_expr_is_composite (arg2)
+      && misra_10_7_other_operand_is_wider (arg2.original_type, type1))
+    warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 10.7");
+}
+
+static void
+misra_10_7_maybe_warn_compound (location_t location, enum tree_code code,
+				tree lhs_type, tree rhs, tree rhs_origtype)
+{
+  if (Wmisra_c_trigger
+      && misra_10_7_uses_usual_arithmetic_conversions (code)
+      && misra_10_6_is_composite_expr (rhs)
+      && misra_10_7_other_operand_is_wider (rhs_origtype, lhs_type))
+    warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 10.7");
+}
+
 static void
 misra_10_6_maybe_warn (location_t location, location_t expr_loc,
 		       tree lhs_type, tree rhs, tree rhs_origtype)
@@ -5010,6 +5110,8 @@ parser_build_binary_op (location_t location, enum tree_code code,
       && (code == PLUS_EXPR || code == MINUS_EXPR)
       && !misra_10_2_add_sub_is_appropriate (code, arg1, arg2))
     warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 10.2");
+
+  misra_10_7_maybe_warn_binary (location, code, arg1, type1, arg2, type2);
 
   if (Wmisra_c_trigger && arg1.original_type != NULL) {
 	if (arg2.original_type != NULL) {
@@ -7574,11 +7676,15 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 	  newrhs = build_binary_op (location,
 				    modifycode, lhs, newrhs, 1);
 
-	  rhs_origtype = misra_10_2_add_sub_result_is_character_type
+	  misra_10_7_maybe_warn_compound
+	    (location, modifycode,
+	     lhs_origtype ? lhs_origtype : TREE_TYPE (lhs),
+	     rhs, rhs_origtype ? rhs_origtype : TREE_TYPE (rhs));
+
+	  rhs_origtype = misra_10_6_composite_result_type
 	    (modifycode,
 	     lhs_origtype ? lhs_origtype : TREE_TYPE (lhs),
-	     rhs_origtype ? rhs_origtype : TREE_TYPE (rhs))
-	    ? char_type_node : NULL_TREE;
+	     rhs_origtype ? rhs_origtype : TREE_TYPE (rhs));
 	}
     }
 

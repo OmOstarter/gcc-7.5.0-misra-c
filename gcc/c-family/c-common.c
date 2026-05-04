@@ -1425,15 +1425,9 @@ unsafe_conversion_p (location_t loc, tree type, tree expr, bool produce_warns)
 	    //	inform(loc, "MISRA C:2025 Rule 10.3\n");
 	    give_warning = UNSAFE_OTHER;
 	  }
-	  if (((TYPE_PRECISION (type) != TYPE_PRECISION (expr_type)
-                    && TYPE_UNSIGNED (expr_type) != TYPE_UNSIGNED (type))
-                    || (TYPE_UNSIGNED (type) && !TYPE_UNSIGNED (expr_type)))
-                   && produce_warns && OPT_Wmisra_c) {
-	  	warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.7");
-	  }
 	  /* When they are the same width but different signedness,
 	     then the value may change.  */
-	  else if (((TYPE_PRECISION (type) == TYPE_PRECISION (expr_type)
+	  if (((TYPE_PRECISION (type) == TYPE_PRECISION (expr_type)
 		    && TYPE_UNSIGNED (expr_type) != TYPE_UNSIGNED (type))
 		   /* Even when converted to a bigger type, if the type is
 		      unsigned but expr is signed, then negative values

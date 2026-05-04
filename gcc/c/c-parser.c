@@ -9273,7 +9273,8 @@ c_parser_postfix_expression (c_parser *parser)
       expr = c_parser_expression (parser);
       if (TREE_CODE (expr.value) == MODIFY_EXPR)
         TREE_NO_WARNING (expr.value) = 1;
-      if (expr.original_code != C_MAYBE_CONST_EXPR)
+      if (expr.original_code != C_MAYBE_CONST_EXPR
+	  && !(Wmisra_c_trigger && expr.original_type != NULL))
         expr.original_code = ERROR_MARK;
       /* Don't change EXPR.ORIGINAL_TYPE.  */
       location_t loc_close_paren = c_parser_peek_token (parser)->location;
