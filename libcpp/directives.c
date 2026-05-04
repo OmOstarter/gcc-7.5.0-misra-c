@@ -620,11 +620,17 @@ lex_macro_node (cpp_reader *pfile, bool is_def_or_undef)
     }
     //if(!(pfile->directive_line == ((source_location) 1)) || !(pfile->line_table->highest_line == ((source_location) 1)))
     if(!(src_loc1 == ((source_location) 1)) && is_def_or_undef && CPP_OPTION(pfile , Wmisra_cpp_trigger))
-      if ( node->flags & NODE_BUILTIN  || ustrncmp(NODE_NAME(node), (const uchar *)"_" ,1) == 0 \
-          ||ustrcmp(NODE_NAME(node) , (const uchar *)"defined") == 0  || ustrcmp(NODE_NAME(node) , (const uchar *)"errno") == 0 )
-        
-        cpp_warning (pfile, CPP_DL_NOTE,
-			  "MISRA C:2025 Rule 20.15");            //misra-c 21,01
+      {
+        if ( node->flags & NODE_BUILTIN  || ustrncmp(NODE_NAME(node), (const uchar *)"_" ,1) == 0 \
+            ||ustrcmp(NODE_NAME(node) , (const uchar *)"defined") == 0  || ustrcmp(NODE_NAME(node) , (const uchar *)"errno") == 0 )
+          cpp_warning (pfile, CPP_DL_NOTE,
+                        "MISRA C:2025 Rule 20.15");            //misra-c 21,01
+        /* MISRA C:2025 Rule 5.10: macro name beginning with '_' is reserved.
+           Uses same src_loc1 guard as Rule 20.15 to skip GCC pre-defined
+           macros (__STDC__, __GNUC__, etc.) which have src_loc1 == 1.  */
+        if (ustrncmp(NODE_NAME(node), (const uchar *)"_", 1) == 0)
+          cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 5.10");
+      }
       if (is_def_or_undef && node == pfile->spec_nodes.n_defined)
 	cpp_error (pfile, CPP_DL_ERROR,
 		   "\"defined\" cannot be used as a macro name");
@@ -688,7 +694,7 @@ do_define (cpp_reader *pfile)
   if (CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
 	if (*misra_tmp_macro_name >= 'a' && *misra_tmp_macro_name <= 'z') {
         	for (int i = 0; i < c_keyword_number; i++) {
-                	if (!misra_compare_string((char *)misra_tmp_c_keyword[i], misra_tmp_macro_name)) {	
+                	if (!misra_compare_string((char *)misra_tmp_c_keyword[i], misra_tmp_macro_name)) {
 				cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.4\n");
                 	}
         	}
