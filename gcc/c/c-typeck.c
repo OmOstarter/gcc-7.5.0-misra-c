@@ -428,6 +428,85 @@ null_pointer_constant_p (const_tree expr)
 		  && TYPE_QUALS (TREE_TYPE (type)) == TYPE_UNQUALIFIED)));
 }
 
+static bool
+misra_11_3_is_object_pointer (tree type)
+{
+  tree target;
+
+  if (!type || TREE_CODE (type) != POINTER_TYPE)
+    return false;
+
+  target = TREE_TYPE (type);
+  return target
+    && TREE_CODE (target) != ERROR_MARK
+    && !VOID_TYPE_P (target)
+    && TREE_CODE (target) != FUNCTION_TYPE;
+}
+
+static bool
+misra_11_3_is_character_type (tree type)
+{
+  if (!type)
+    return false;
+
+  type = TYPE_MAIN_VARIANT (type);
+  return (type == char_type_node
+	  || type == signed_char_type_node
+	  || type == unsigned_char_type_node);
+}
+
+static bool
+misra_11_3_source_is_unqualified_object (tree source_target)
+{
+  return source_target
+    && (TYPE_QUALS_NO_ADDR_SPACE_NO_ATOMIC (source_target) == TYPE_UNQUALIFIED);
+}
+
+static bool
+misra_11_3_character_pointer_exception (tree target_type, tree source_type)
+{
+  tree target_target;
+  tree source_target;
+
+  if (!misra_11_3_is_object_pointer (target_type)
+      || !misra_11_3_is_object_pointer (source_type))
+    return false;
+
+  target_target = TREE_TYPE (target_type);
+  source_target = TREE_TYPE (source_type);
+
+  return misra_11_3_source_is_unqualified_object (source_target)
+    && misra_11_3_is_character_type (target_target);
+}
+
+static bool
+misra_11_3_pointer_conversion_is_compliant (tree target_type, tree source_type)
+{
+  tree target_target;
+  tree source_target;
+
+  if (!misra_11_3_is_object_pointer (target_type)
+      || !misra_11_3_is_object_pointer (source_type))
+    return true;
+
+  if (misra_11_3_character_pointer_exception (target_type, source_type))
+    return true;
+
+  target_target = TYPE_MAIN_VARIANT (TREE_TYPE (target_type));
+  source_target = TYPE_MAIN_VARIANT (TREE_TYPE (source_type));
+
+  return comptypes (target_target, source_target);
+}
+
+static void
+misra_11_3_maybe_warn (location_t loc, tree target_type, tree source_type)
+{
+  if (Wmisra_c_trigger
+      && loc
+      && !misra_11_3_pointer_conversion_is_compliant (target_type, source_type))
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.3");
+}
+
 /* MISRA C:2025 Rule 11.9: Return true if EXPR is an integer-type null pointer
    constant that was NOT expanded from the NULL macro.  A (void*)0 form always
    returns false (compliant by rule).  */
@@ -7123,12 +7202,14 @@ build_c_cast (location_t loc, tree type, tree expr)
 						//11
       if(type && otype && Wmisra_c_trigger)
       {
-      	const wide_int_ref &num=value;
-      	tree type1=type;
-      	tree type2=otype;
-      	// MISRA C:2025 Rule 11
-      	int i;
-      	int warning_flag[9]; // warning_flag[num] ==> Rule 11.(num+1)
+	const wide_int_ref &num=value;
+	tree type1=type;
+	tree type2=otype;
+	// MISRA C:2025 Rule 11
+	int i;
+	int warning_flag[9]; // warning_flag[num] ==> Rule 11.(num+1)
+		for (i = 0; i < 9; i++)
+		  warning_flag[i] = 0;
       	if(TREE_CODE(type1)==POINTER_TYPE)
       	{
       	  while(TREE_CODE(type1)==POINTER_TYPE)
@@ -7161,36 +7242,11 @@ build_c_cast (location_t loc, tree type, tree expr)
 	  	if(!TYPE_LANG_FLAG_0(type2))
 			warning_flag[1]=1;
       	}
-      	type1=type;
-      	type2=otype;
-      	if(TREE_CODE(type1)==POINTER_TYPE&&TREE_CODE(type2)==POINTER_TYPE)
-      	{
-	 type1=TREE_TYPE(type1);
-	 type2=TREE_TYPE(type2);
-	 while(TREE_CODE(type1)==POINTER_TYPE)
-		type1=TREE_TYPE(type1);
-	 while(TREE_CODE(type2)==POINTER_TYPE)
-		type2=TREE_TYPE(type2);
-	 if(TREE_CODE(type1)!=TREE_CODE(type2))
-		warning_flag[2]=1;
-	 else if(TREE_CODE(type1)==INTEGER_TYPE)
-	{
-		tree size_type=TYPE_SIZE(type1);
-		tree size_otype=TYPE_SIZE(type2);
-		const wide_int_ref &stype=size_type;
-		const wide_int_ref &sotype=size_otype;
-		if(stype.to_shwi()!=sotype.to_shwi())
-			warning_flag[2]=1;
-	}
-	if(TYPE_P(type1)?TYPE_READONLY(type1):TREE_READONLY(type1)||TREE_THIS_VOLATILE(type1))
-		if(!(TYPE_P(type2)?TYPE_READONLY(type2):TREE_READONLY(type2))&&!TREE_THIS_VOLATILE(type2))
-			warning_flag[2]=1;
-	if(TYPE_P(type2)?TYPE_READONLY(type2):TREE_READONLY(type2)||TREE_THIS_VOLATILE(type2))
-		if(!(TYPE_P(type1)?TYPE_READONLY(type1):TREE_READONLY(type1))&&!TREE_THIS_VOLATILE(type1))
-			warning_flag[2]=1;
-      }
-      type1=type;
-      type2=otype; 
+	      type1=type;
+	      type2=otype;
+	      misra_11_3_maybe_warn (loc, type1, type2);
+	      type1=type;
+	      type2=otype;
       while(TREE_CODE(type2)==POINTER_TYPE)
 		type2=TREE_TYPE(type2);
       if(TREE_CODE(type1)==POINTER_TYPE&&TREE_CODE(type2)==VOID_TYPE)
@@ -8446,6 +8502,11 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
       int target_cmp = 0;   /* Cache comp_target_types () result.  */
       addr_space_t asl;
       addr_space_t asr;
+      location_t misra_11_3_loc
+	= (errtype == ic_argpass && expr_loc != UNKNOWN_LOCATION)
+	  ? expr_loc : location;
+
+      misra_11_3_maybe_warn (misra_11_3_loc, type, rhstype);
 
       if (TREE_CODE (mvl) != ARRAY_TYPE)
 	mvl = (TYPE_ATOMIC (mvl)
