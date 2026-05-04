@@ -412,6 +412,67 @@ directive_diagnostics (cpp_reader *pfile, const directive *dir, int indented)
     }
 }
 
+/* MISRA C:2025 Rule 20.1 helper: scan raw bytes [BUF, END) for content
+   that is not a preprocessor directive, whitespace, or comment.
+   Returns true if such content (i.e., code) is found.  The range covers
+   all lines already finalised by _cpp_clean_line before the current line.  */
+static bool
+misra_20_1_scan_for_code (const unsigned char *buf, const unsigned char *end)
+{
+  const unsigned char *p = buf;
+  while (p < end)
+    {
+      /* Skip horizontal whitespace and CR.  */
+      while (p < end && (*p == ' ' || *p == '\t' || *p == '\r'))
+        p++;
+
+      if (p >= end)
+        break;
+
+      /* Empty line.  */
+      if (*p == '\n')
+        { p++; continue; }
+
+      /* Preprocessor directive — skip to end of logical line, following
+         escaped-newline continuations.  */
+      if (*p == '#')
+        {
+          while (p < end)
+            {
+              if (*p == '\\' && p + 1 < end && p[1] == '\n')
+                { p += 2; continue; }
+              if (*p == '\n')
+                { p++; break; }
+              p++;
+            }
+          continue;
+        }
+
+      /* C++ single-line comment.  */
+      if (*p == '/' && p + 1 < end && p[1] == '/')
+        {
+          while (p < end && *p != '\n')
+            p++;
+          if (p < end) p++;
+          continue;
+        }
+
+      /* Block comment (may span multiple lines).  */
+      if (*p == '/' && p + 1 < end && p[1] == '*')
+        {
+          p += 2;
+          while (p + 1 < end && !(p[0] == '*' && p[1] == '/'))
+            p++;
+          if (p + 1 < end) p += 2;
+          continue;
+        }
+
+      /* Non-directive, non-comment content — code found.  */
+      return true;
+    }
+  return false;
+}
+
 /* Check if we have a known directive.  INDENTED is nonzero if the
    '#' of the directive was indented.  This function is in this file
    to save unnecessarily exporting dtable etc. to lex.c.  Returns
@@ -547,7 +608,27 @@ _cpp_handle_directive (cpp_reader *pfile, int indented)
     prepare_directive_trad (pfile);
 
   if (dir)
-    pfile->directive->handler (pfile);
+    {
+      /* MISRA C:2025 Rule 20.1: #include directives should only be
+         preceded by preprocessor directives or comments.  Scan the raw
+         file content before this line; once code is detected the flag
+         stays set for all subsequent #include directives in this file.  */
+      if (CPP_OPTION (pfile, Wmisra_cpp_trigger)
+          && dir == &dtable[T_INCLUDE]
+          && !pfile->buffer->sysp
+          && pfile->buffer->buf
+          && pfile->buffer->line_base
+          && pfile->buffer->line_base >= pfile->buffer->buf)
+        {
+          if (!pfile->buffer->misra_20_1_seen_code)
+            pfile->buffer->misra_20_1_seen_code
+              = misra_20_1_scan_for_code (pfile->buffer->buf,
+                                          pfile->buffer->line_base);
+          if (pfile->buffer->misra_20_1_seen_code)
+            cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.1");
+        }
+      pfile->directive->handler (pfile);
+    }
   else if (skip == 0)
     _cpp_backup_tokens (pfile, 1);
 
