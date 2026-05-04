@@ -428,6 +428,33 @@ null_pointer_constant_p (const_tree expr)
 		  && TYPE_QUALS (TREE_TYPE (type)) == TYPE_UNQUALIFIED)));
 }
 
+/* MISRA C:2025 Rule 11.9: Return true if EXPR is an integer-type null pointer
+   constant that was NOT expanded from the NULL macro.  A (void*)0 form always
+   returns false (compliant by rule).  */
+static bool
+misra_11_9_is_int_npc_not_null (tree expr)
+{
+  if (!expr
+      || TREE_CODE (expr) != INTEGER_CST
+      || !integer_zerop (expr)
+      || !INTEGRAL_TYPE_P (TREE_TYPE (expr)))
+    return false;
+
+  location_t loc = EXPR_LOCATION (expr);
+  if (loc == UNKNOWN_LOCATION)
+    return true;
+
+  if (!linemap_location_from_macro_expansion_p (line_table, loc))
+    return true;
+
+  const struct line_map *map = linemap_lookup (line_table, loc);
+  if (!map || !linemap_macro_expansion_map_p (map))
+    return true;
+
+  const char *name = linemap_map_get_macro_name (linemap_check_macro (map));
+  return (name == NULL || strcmp (name, "NULL") != 0);
+}
+
 /* EXPR may appear in an unevaluated part of an integer constant
    expression, but not in an evaluated part.  Wrap it in a
    C_MAYBE_CONST_EXPR, or mark it with TREE_OVERFLOW if it is just an
@@ -6305,6 +6332,8 @@ build_conditional_expr (location_t colon_loc, tree ifexp, bool ifexp_bcp,
 		 "pointer/integer type mismatch in conditional expression");
       else
 	{
+	  if (Wmisra_c_trigger && misra_11_9_is_int_npc_not_null (orig_op2))
+	    warning_at (colon_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.9");
 	  op2 = null_pointer_node;
 	}
       result_type = type1;
@@ -6316,6 +6345,8 @@ build_conditional_expr (location_t colon_loc, tree ifexp, bool ifexp_bcp,
 		 "pointer/integer type mismatch in conditional expression");
       else
 	{
+	  if (Wmisra_c_trigger && misra_11_9_is_int_npc_not_null (orig_op1))
+	    warning_at (colon_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.9");
 	  op1 = null_pointer_node;
 	}
       result_type = type2;
@@ -8313,6 +8344,8 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 				   "integer without a cast"),
 			        G_("return makes pointer from integer "
 				   "without a cast"));
+      else if (Wmisra_c_trigger && misra_11_9_is_int_npc_not_null (orig_rhs))
+	warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 11.9");
 
       return convert (type, rhs);
     }
@@ -13267,6 +13300,8 @@ build_binary_op (location_t location, enum tree_code code,
 			    "for the address of %qD will never be NULL",
 			    TREE_OPERAND (op0, 0));
 	    }
+	  if (Wmisra_c_trigger && misra_11_9_is_int_npc_not_null (orig_op1))
+	    warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 11.9");
 	  result_type = type0;
 	}
       else if (code1 == POINTER_TYPE && null_pointer_constant_p (orig_op0))
@@ -13288,6 +13323,8 @@ build_binary_op (location_t location, enum tree_code code,
 			    "for the address of %qD will never be NULL",
 			    TREE_OPERAND (op1, 0));
 	    }
+	  if (Wmisra_c_trigger && misra_11_9_is_int_npc_not_null (orig_op0))
+	    warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 11.9");
 	  result_type = type1;
 	}
       else if (code0 == POINTER_TYPE && code1 == POINTER_TYPE)
