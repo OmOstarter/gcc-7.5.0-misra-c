@@ -442,7 +442,7 @@ misra_11_9_is_int_npc_not_null (tree expr)
 
   location_t loc = EXPR_LOCATION (expr);
   if (loc == UNKNOWN_LOCATION)
-    return true;
+    return false; /* Internally generated zero, not user-written code.  */
 
   if (!linemap_location_from_macro_expansion_p (line_table, loc))
     return true;
@@ -13912,6 +13912,8 @@ c_objc_common_truthvalue_conversion (location_t location, tree expr)
     case POINTER_TYPE:
       if (reject_gcc_builtin (expr))
 	return error_mark_node;
+      if (Wmisra_c_trigger)
+	warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 11.11");
       break;
 
     case FUNCTION_TYPE:
