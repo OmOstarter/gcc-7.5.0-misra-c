@@ -89,6 +89,13 @@ static void misra_check_integer_constant_macro_arg (cpp_reader *pfile,
                                                     source_location invoc_loc);
 /* === end MISRA C:2025 Rule 7.5 / 7.6 helper prototype === */
 
+/* === MISRA C:2025 Rule 20.12 helper prototype === */
+static void misra_check_20_12 (cpp_reader *pfile,
+                                cpp_macro *macro,
+                                macro_arg *args,
+                                source_location invoc_loc);
+/* === end MISRA C:2025 Rule 20.12 helper prototype === */
+
 
 /* The kind of macro tokens which the instance of
    macro_arg_token_iter is supposed to iterate over.  */
@@ -1238,6 +1245,13 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
                                               location);
     /* === MISRA C:2025 Rule 7.5 / 7.6: 結束 === */
 
+    /* === MISRA C:2025 Rule 20.12 === */
+    if (macro->paramc > 0)
+      misra_check_20_12 (pfile, macro,
+                         (macro_arg *) buff->base,
+                         location);
+    /* === end MISRA C:2025 Rule 20.12 === */
+
 	  if (macro->paramc > 0)
 	    replace_args (pfile, node, macro,
 			  (macro_arg *) buff->base,
@@ -1935,6 +1949,102 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
 }
 
 /* === end MISRA C:2025 Rule 7.5 implementation ================================ */
+
+/* === MISRA C:2025 Rule 20.12 implementation ==================================
+   A macro parameter used as an operand to # or ## which is itself subject to
+   further macro replacement shall only be used as an operand to these operators.
+   Detection: at the call site, if any parameter has mixed usage (both as a
+   #/## operand and as a regular reference in the replacement list) AND the
+   corresponding argument is a defined macro name, warn.  */
+static void
+misra_check_20_12 (cpp_reader *pfile,
+                   cpp_macro  *macro,
+                   macro_arg  *args,
+                   source_location invoc_loc)
+{
+  unsigned int hash_paste_mask = 0; /* params used as # or ## operands */
+  unsigned int regular_mask    = 0; /* params used in regular expansion context */
+  unsigned int mixed_mask;
+  unsigned int n    = macro->count;
+  cpp_token   *toks = macro->exp.tokens;
+  unsigned int ii;
+
+  if (!CPP_OPTION (pfile, Wmisra_cpp_trigger))
+    return;
+  if (cpp_in_system_header (pfile))
+    return;
+  if (macro->syshdr || macro->traditional || !macro->fun_like)
+    return;
+  /* Guard against overflow of the 32-bit mask.  */
+  if (macro->paramc == 0 || macro->paramc > 31)
+    return;
+
+  /* Skip macros from built-in / command-line pseudo-files (path starts '<'). */
+  {
+    const char *mfname =
+      linemap_get_expansion_filename (pfile->line_table, macro->line);
+    if (!mfname || mfname[0] == '<')
+      return;
+  }
+
+  /* Classify each CPP_MACRO_ARG token in the replacement list.  */
+  for (ii = 0; ii < n; ii++)
+    {
+      cpp_token  *tok = &toks[ii];
+      unsigned int pi;
+
+      if (tok->type != CPP_MACRO_ARG)
+        continue;
+
+      pi = tok->val.macro_arg.arg_no - 1; /* 0-based parameter index */
+      if (pi > 30)
+        continue;
+
+      if (tok->flags & STRINGIFY_ARG)
+        /* # operand — not expanded before use.  */
+        hash_paste_mask |= (1u << pi);
+      else if (tok->flags & PASTE_LEFT)
+        /* Left operand of ## — not expanded before use.  */
+        hash_paste_mask |= (1u << pi);
+      else if (ii > 0 && (toks[ii - 1].flags & PASTE_LEFT))
+        /* Right operand of ## — not expanded before use.  */
+        hash_paste_mask |= (1u << pi);
+      else
+        /* Regular use — argument IS expanded before substitution.  */
+        regular_mask |= (1u << pi);
+    }
+
+  mixed_mask = hash_paste_mask & regular_mask;
+  if (!mixed_mask)
+    return;
+
+  /* For each mixed-use parameter, check whether the corresponding argument
+     at this call site is itself a defined macro.  */
+  for (ii = 0; ii < macro->paramc; ii++)
+    {
+      const cpp_token *tok;
+      cpp_hashnode    *argnode;
+
+      if (!(mixed_mask & (1u << ii)))
+        continue;
+
+      if (args[ii].count != 1)
+        continue;
+
+      tok = args[ii].first[0];
+      if (tok->type != CPP_NAME)
+        continue;
+
+      argnode = tok->val.node.node;
+      if (argnode->type == NT_MACRO)
+        {
+          cpp_warning_with_line (pfile, CPP_W_NONE, invoc_loc, 0,
+                                 "MISRA C:2025 Rule 20.12");
+          return; /* One warning per macro invocation is sufficient.  */
+        }
+    }
+}
+/* === end MISRA C:2025 Rule 20.12 implementation ============================= */
 
 /* Replace the parameters in a function-like macro of NODE with the
    actual ARGS, and place the result in a newly pushed token context.
