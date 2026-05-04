@@ -3162,6 +3162,22 @@ pushdecl (tree x)
 	   declarations which are registered at startup with location 1.  */
 	if (IDENTIFIER_POINTER(name)[0] == '_' && locus > BUILTINS_LOCATION)
 	  warning_at(locus, OPT_Wmisra_c, "MISRA C:2025 Rule 5.10");
+	/* MISRA C:2025 Rule 8.19: no external declarations in a source file.
+	   A non-defining declaration with external linkage should only appear
+	   in a header file.  Flag any such declaration whose source location
+	   is not a .h file.  Implicit function declarations and GCC built-ins
+	   are excluded via the C_DECL_IMPLICIT and BUILTINS_LOCATION guards.  */
+	if (DECL_EXTERNAL (x) && TREE_PUBLIC (x) && locus > BUILTINS_LOCATION
+	    && !(TREE_CODE (x) == FUNCTION_DECL && C_DECL_IMPLICIT (x)))
+	  {
+	    const char *fname = LOCATION_FILE (locus);
+	    if (fname != NULL)
+	      {
+		const char *dot = strrchr (fname, '.');
+		if (dot != NULL && strcmp (dot, ".h") != 0)
+		  warning_at (locus, OPT_Wmisra_c, "MISRA C:2025 Rule 8.19");
+	      }
+	  }
   }
   bool nested = false;
 
