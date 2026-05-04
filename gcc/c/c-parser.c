@@ -101,6 +101,160 @@ location_t loc_9_4;
    and report error if any of the decls are still incomplete.  */ 
 
 vec<tree> incomplete_record_decls;
+
+enum misra_10_8_category
+{
+  MISRA_10_8_OTHER = 0,
+  MISRA_10_8_BOOL,
+  MISRA_10_8_CHAR,
+  MISRA_10_8_SIGNED,
+  MISRA_10_8_UNSIGNED,
+  MISRA_10_8_ENUM,
+  MISRA_10_8_REAL,
+  MISRA_10_8_COMPLEX,
+  MISRA_10_8_POINTER
+};
+
+static bool
+misra_10_8_is_composite_operator (enum tree_code code)
+{
+  switch (code)
+    {
+    case PLUS_EXPR:
+    case MINUS_EXPR:
+    case MULT_EXPR:
+    case TRUNC_DIV_EXPR:
+    case CEIL_DIV_EXPR:
+    case FLOOR_DIV_EXPR:
+    case ROUND_DIV_EXPR:
+    case EXACT_DIV_EXPR:
+    case TRUNC_MOD_EXPR:
+    case CEIL_MOD_EXPR:
+    case FLOOR_MOD_EXPR:
+    case ROUND_MOD_EXPR:
+    case LSHIFT_EXPR:
+    case RSHIFT_EXPR:
+    case BIT_IOR_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_AND_EXPR:
+      return true;
+
+    default:
+      return false;
+    }
+}
+
+static bool
+misra_10_8_is_essentially_character_type (tree type)
+{
+  return type && TYPE_MAIN_VARIANT (type) == char_type_node;
+}
+
+static enum misra_10_8_category
+misra_10_8_category_of_type (tree type)
+{
+  if (!type)
+    return MISRA_10_8_OTHER;
+
+  type = TYPE_MAIN_VARIANT (type);
+
+  if (TREE_CODE (type) == BOOLEAN_TYPE)
+    return MISRA_10_8_BOOL;
+  if (misra_10_8_is_essentially_character_type (type))
+    return MISRA_10_8_CHAR;
+  if (TREE_CODE (type) == ENUMERAL_TYPE)
+    return MISRA_10_8_ENUM;
+  if (TREE_CODE (type) == INTEGER_TYPE)
+    return TYPE_UNSIGNED (type) ? MISRA_10_8_UNSIGNED : MISRA_10_8_SIGNED;
+  if (TREE_CODE (type) == REAL_TYPE)
+    return MISRA_10_8_REAL;
+  if (TREE_CODE (type) == COMPLEX_TYPE)
+    return MISRA_10_8_COMPLEX;
+  if (TREE_CODE (type) == POINTER_TYPE)
+    return MISRA_10_8_POINTER;
+
+  return MISRA_10_8_OTHER;
+}
+
+static unsigned int
+misra_10_8_type_rank (tree type)
+{
+  if (!type)
+    return 0;
+
+  type = TYPE_MAIN_VARIANT (type);
+
+  if (TREE_CODE (type) == COMPLEX_TYPE)
+    type = TREE_TYPE (type);
+
+  if (INTEGRAL_TYPE_P (type) || SCALAR_FLOAT_TYPE_P (type))
+    return TYPE_PRECISION (type);
+
+  return 0;
+}
+
+static bool
+misra_10_8_real_complex_exception (tree target_type, tree source_type)
+{
+  enum misra_10_8_category target_cat;
+  enum misra_10_8_category source_cat;
+
+  if (!target_type || !source_type)
+    return false;
+
+  target_type = TYPE_MAIN_VARIANT (target_type);
+  source_type = TYPE_MAIN_VARIANT (source_type);
+  target_cat = misra_10_8_category_of_type (target_type);
+  source_cat = misra_10_8_category_of_type (source_type);
+
+  if (target_cat == MISRA_10_8_COMPLEX && source_cat == MISRA_10_8_REAL)
+    return (misra_10_8_type_rank (TREE_TYPE (target_type))
+	    <= misra_10_8_type_rank (source_type));
+
+  if (target_cat == MISRA_10_8_REAL && source_cat == MISRA_10_8_COMPLEX)
+    return (misra_10_8_type_rank (target_type)
+	    <= misra_10_8_type_rank (TREE_TYPE (source_type)));
+
+  return false;
+}
+
+static bool
+misra_10_8_cast_is_compliant (tree target_type, tree source_type)
+{
+  enum misra_10_8_category target_cat;
+  enum misra_10_8_category source_cat;
+
+  if (!target_type || !source_type)
+    return true;
+
+  target_type = TYPE_MAIN_VARIANT (target_type);
+  source_type = TYPE_MAIN_VARIANT (source_type);
+  target_cat = misra_10_8_category_of_type (target_type);
+  source_cat = misra_10_8_category_of_type (source_type);
+
+  if (target_cat == MISRA_10_8_OTHER || source_cat == MISRA_10_8_OTHER)
+    return true;
+
+  if (misra_10_8_real_complex_exception (target_type, source_type))
+    return true;
+
+  if (target_cat != source_cat)
+    return false;
+
+  return misra_10_8_type_rank (target_type) <= misra_10_8_type_rank (source_type);
+}
+
+static void
+misra_10_8_maybe_warn (location_t cast_loc, tree target_type,
+		       struct c_expr expr)
+{
+  if (Wmisra_c_trigger
+      && expr.original_type
+      && misra_10_8_is_composite_operator (expr.original_code)
+      && !misra_10_8_cast_is_compliant (target_type, expr.original_type))
+    warning_at (cast_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.8");
+}
+
 /* —— MISRA helper (23.2): 檢查一個 expression tree 是否「看起來」會有副作用 —— */
 static bool
 misra_expr_has_potential_side_effects (tree t)
@@ -7690,35 +7844,9 @@ $66 = {code = BOOLEAN_TYPE, side_effects_flag = 0, constant_flag = 0,
 		}
 	}
     }
-    // MISRA C:2025 Rule 10.8
-    if (Wmisra_c_trigger) {
-	if (expr.value->base.used_flag) {
-		goto MISRA_RULE;
-	}
-	if (expr.original_type) {
-		if (type_name->specs->type->type_common.precision > expr.original_type->type_common.precision && type_name->specs->type->base.code != VOID_TYPE)
-                        warning_at(cast_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.8");
-		if (type_name->specs->type->type_common.precision < expr.original_type->type_common.precision && 
-			type_name->specs->type->base.u.bits.unsigned_flag !=  expr.original_type->base.u.bits.unsigned_flag && type_name->specs->type->base.code != VOID_TYPE) {
-			warning_at(cast_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.8");
-		}
-	} else {
-		if (type_name->specs->type->type_common.precision > expr.value->typed.type->type_common.precision && type_name->specs->type->base.code != VOID_TYPE) {
-			warning_at(cast_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.8");
-			
-		}
-                if (type_name->specs->type->type_common.precision < expr.value->typed.type->type_common.precision && 
-                        type_name->specs->type->base.u.bits.unsigned_flag != expr.value->typed.type->base.u.bits.unsigned_flag && type_name->specs->type->base.code != VOID_TYPE) {
-			if (type_name->specs->type->base.code == BOOLEAN_TYPE && (*((*(struct tree_int_cst *)expr.value).val) == 0 || *((*(struct tree_int_cst *)expr.value).val) == 1)) {
-				;
-			} else {
-                        	warning_at(cast_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.8");
-			}
-		}
-	}
-    }	
-MISRA_RULE:
-    expr = convert_lvalue_to_rvalue (expr_loc, expr, true, true);
+	    // MISRA C:2025 Rule 10.8
+	    misra_10_8_maybe_warn (cast_loc, type_name->specs->type, expr);
+	    expr = convert_lvalue_to_rvalue (expr_loc, expr, true, true);
       }
       ret.value = c_cast_expr (cast_loc, type_name, expr.value);
       if (ret.value && expr.value)
