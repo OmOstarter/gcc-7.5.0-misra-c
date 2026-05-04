@@ -6182,6 +6182,10 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 	  else
 	    warn_defaults_to (loc, OPT_Wimplicit_int,
 			      "type defaults to %<int%> in type name");
+	  /* MISRA C:2025 Rule 8.1: type not explicitly specified (implicit int).
+	     The funcdef case is handled in start_function via warn_about_return_type. */
+	  if (Wmisra_c_trigger)
+	    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 8.1");
 	}
     }
 
@@ -9120,6 +9124,9 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
 			   : (warn_return_type ? OPT_Wreturn_type
 			      : OPT_Wimplicit_int),
 		      "return type defaults to %<int%>");
+  /* MISRA C:2025 Rule 8.1: implicit int return type on function definition. */
+  if (warn_about_return_type && Wmisra_c_trigger)
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 8.1");
 
   /* Make the init_value nonzero so pushdecl knows this is not tentative.
      error_mark_node is replaced below (in pop_scope) with the BLOCK.  */
@@ -9443,6 +9450,10 @@ store_parm_decls_oldstyle (tree fndecl, const struct c_arg_info *arg_info)
 	    warning_at (DECL_SOURCE_LOCATION (decl),
 			OPT_Wmissing_parameter_type,
 			"type of %qD defaults to %<int%>", decl);
+	  /* MISRA C:2025 Rule 8.1: K&R parameter with implicit int type. */
+	  if (Wmisra_c_trigger)
+	    warning_at (DECL_SOURCE_LOCATION (decl),
+			OPT_Wmisra_c, "MISRA C:2025 Rule 8.1");
 	}
 
       TREE_PURPOSE (parm) = decl;
