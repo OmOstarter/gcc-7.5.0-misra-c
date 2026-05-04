@@ -815,6 +815,7 @@ static tree grokdeclarator (const struct c_declarator *,
 			    bool *, enum deprecated_states);
 static tree grokparms (struct c_arg_info *, bool);
 static void layout_array_type (tree);
+static bool misra_c_8_4_visible_compatible_decl_p (tree, tree);
 static void warn_defaults_to (location_t, int, const char *, ...)
     ATTRIBUTE_GCC_DIAG(3,4);
 
@@ -843,6 +844,18 @@ add_stmt (tree t)
   append_to_statement_list_force (t, &cur_stmt_list);
 
   return t;
+}
+
+static bool
+misra_c_8_4_visible_compatible_decl_p (tree decl, tree visible_decl)
+{
+  if (visible_decl == NULL_TREE
+      || visible_decl == error_mark_node
+      || TREE_CODE (visible_decl) != TREE_CODE (decl)
+      || visible_decl == decl)
+    return false;
+
+  return comptypes (TREE_TYPE (decl), TREE_TYPE (visible_decl));
 }
 
 /* Build a pointer type using the default pointer mode.  */
@@ -5232,6 +5245,17 @@ start_decl (struct c_declarator *declarator, struct c_declspecs *declspecs,
       && VAR_OR_FUNCTION_DECL_P (decl))
       objc_check_global_decl (decl);
 
+  if (Wmisra_c_trigger
+      && VAR_P (decl)
+      && current_scope == file_scope
+      && TREE_PUBLIC (decl)
+      && !DECL_IN_SYSTEM_HEADER (decl)
+      && (!DECL_EXTERNAL (decl) || initialized)
+      && !misra_c_8_4_visible_compatible_decl_p
+	    (decl, lookup_name_in_scope (DECL_NAME (decl), current_scope)))
+    warning_at (DECL_SOURCE_LOCATION (decl),
+		OPT_Wmisra_c, "MISRA C:2025 Rule 8.4");
+
   /* Add this decl to the current scope.
      TEM may equal DECL or it may be a previous decl of the same name.  */
   tem = pushdecl (decl);
@@ -6380,15 +6404,7 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
 	   && !funcdef_flag)
     {
       /* 'extern' with initialization is invalid if not at file scope.  */
-       if (current_scope == file_scope)
-         {
-           /* It is fine to have 'extern const' when compiling at C
-              and C++ intersection.  */
-           if (!(warn_cxx_compat && constp))
-             warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 8.4",
-		 	 name);
-         }
-      else
+      if (current_scope != file_scope)
 	error_at (loc, "%qE has both %<extern%> and initializer", name);
     }
   else if (current_scope == file_scope)
@@ -9211,6 +9227,14 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
   old_decl = lookup_name_in_scope (DECL_NAME (decl1), current_scope);
   if (old_decl && TREE_CODE (old_decl) != FUNCTION_DECL)
     old_decl = 0;
+
+  if (Wmisra_c_trigger
+      && TREE_PUBLIC (decl1)
+      && !MAIN_NAME_P (DECL_NAME (decl1))
+      && !DECL_IN_SYSTEM_HEADER (decl1)
+      && !misra_c_8_4_visible_compatible_decl_p (decl1, old_decl))
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 8.4");
+
   current_function_prototype_locus = UNKNOWN_LOCATION;
   current_function_prototype_built_in = false;
   current_function_prototype_arg_types = NULL_TREE;
