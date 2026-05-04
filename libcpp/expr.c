@@ -767,17 +767,6 @@ cpp_classify_number (cpp_reader *pfile, const cpp_token *token,
 	      return CPP_N_INVALID;
 	    }
 	}
-      if (CPP_OPTION(pfile , Wmisra_cpp_trigger)) {
-	if (radix == 16) {
-        	if (*str == 'U' || *str == 'u')
-			misra_check_rule_7_2 = 0;
-        	else {
-			//SYNTAX_WARNING_AT(virtual_location, "MISRA C:2025 Rule 7.2");
-			misra_check_rule_7_2 = 1;
-			misra_rule_7_2_location = virtual_location;
-		}
-      	}
-      }
       /* Traditional C only accepted the 'L' suffix.
          Suppress warning about 'LL' with -Wno-long-long.  */
       if (CPP_WTRADITIONAL (pfile) && ! cpp_sys_macro_p (pfile))
@@ -1138,7 +1127,16 @@ eval_token (cpp_reader *pfile, const cpp_token *token,
 	  break;
 	case CPP_N_INTEGER:
 	  if (!(temp & CPP_N_IMAGINARY))
-	    return cpp_interpret_integer (pfile, token, temp);
+	    {
+	      cpp_num integer = cpp_interpret_integer (pfile, token, temp);
+	      if (CPP_OPTION (pfile, Wmisra_cpp_trigger)
+		  && !pfile->state.skip_eval
+		  && integer.unsignedp
+		  && !(temp & CPP_N_UNSIGNED))
+		cpp_warning_with_line (pfile, CPP_W_NONE, virtual_location, 0,
+				       "MISRA C:2025 Rule 7.2");
+	      return integer;
+	    }
 	  cpp_error_with_line (pfile, CPP_DL_ERROR, virtual_location, 0,
 			       "imaginary number in preprocessor expression");
 	  break;

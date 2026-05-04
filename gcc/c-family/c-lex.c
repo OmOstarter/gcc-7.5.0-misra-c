@@ -37,7 +37,7 @@ static splay_tree file_info_tree;
 int pending_lang_change; /* If we need to switch languages - C++ only */
 int c_header_level;	 /* depth in C headers - C++ only */
 
-static tree interpret_integer (const cpp_token *, unsigned int,
+static tree interpret_integer (const cpp_token *, unsigned int, location_t,
 			       enum overflow_type *);
 static tree interpret_float (const cpp_token *, unsigned int, const char *,
 			     enum overflow_type *);
@@ -424,7 +424,7 @@ c_lex_with_flags (tree *value, location_t *loc, unsigned char *cpp_flags,
 	       Set PURE_ZERO to pass this information to the C++ parser.  */
 	    if (tok->val.str.len == 1 && *tok->val.str.text == '0')
 	      add_flags = PURE_ZERO;
-	    *value = interpret_integer (tok, flags, &overflow);
+	    *value = interpret_integer (tok, flags, *loc, &overflow);
 	    break;
 
 	  case CPP_N_FLOATING:
@@ -686,7 +686,7 @@ narrowest_signed_type (const widest_int &val, unsigned int flags)
 
 /* Interpret TOKEN, an integer with FLAGS as classified by cpplib.  */
 static tree
-interpret_integer (const cpp_token *token, unsigned int flags,
+interpret_integer (const cpp_token *token, unsigned int flags, location_t loc,
 		   enum overflow_type *overflow)
 {
   tree value, type;
@@ -767,6 +767,12 @@ interpret_integer (const cpp_token *token, unsigned int flags,
 	   ? "integer constant is too large for %<unsigned long%> type"
 	   : "integer constant is too large for %<long%> type");
     }
+
+  if (Wmisra_c_trigger
+      && TREE_CODE (type) == INTEGER_TYPE
+      && TYPE_UNSIGNED (type)
+      && !(flags & CPP_N_UNSIGNED))
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 7.2");
 
   value = wide_int_to_tree (type, wval);
 
