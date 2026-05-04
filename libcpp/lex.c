@@ -1138,8 +1138,12 @@ _cpp_process_line_notes (cpp_reader *pfile, int in_comment)
 	}
       else if (_cpp_trigraph_map[note->type])
 	{
-	  if (CPP_OPTION (pfile, warn_trigraphs)
-	      && (!in_comment || warn_in_comment (pfile, note)))
+	  if (CPP_OPTION (pfile, Wmisra_cpp_trigger))
+	    cpp_warning_with_line
+	      (pfile, CPP_W_NONE, pfile->line_table->highest_line, col,
+	       "MISRA C:2025 Rule 4.2");
+	  else if (CPP_OPTION (pfile, warn_trigraphs)
+		   && (!in_comment || warn_in_comment (pfile, note)))
 	    {
 	      if (CPP_OPTION (pfile, trigraphs))
 		cpp_warning_with_line (pfile, CPP_W_TRIGRAPHS,
@@ -1152,7 +1156,8 @@ _cpp_process_line_notes (cpp_reader *pfile, int in_comment)
 		  cpp_warning_with_line
 		    (pfile, CPP_W_TRIGRAPHS,
                      pfile->line_table->highest_line, col,
-		     "MISRA C:2025 Rule 4.2");
+		     "trigraph ??%c ignored, use -trigraphs to enable",
+		     note->type);
 		}
 	    }
 	}
