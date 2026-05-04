@@ -5826,9 +5826,31 @@ flexible_array_type_p (tree type)
 /* Performs sanity checks on the TYPE and WIDTH of the bit-field NAME,
    replacing with appropriate values if they are invalid.  */
 
+static bool
+misra_c_6_1_bitfield_type_ok (tree type, bool explicit_signed_p,
+			      bool plain_int_p)
+{
+  tree type_mv = TYPE_MAIN_VARIANT (type);
+
+  if (plain_int_p)
+    return false;
+
+  if (type_mv == unsigned_type_node)
+    return true;
+
+  if (type_mv == integer_type_node && explicit_signed_p)
+    return true;
+
+  if (flag_isoc99 && type_mv == boolean_type_node)
+    return true;
+
+  return false;
+}
+
 static void
 check_bitfield_type_and_width (location_t loc, tree *type, tree *width,
-			       tree orig_name)
+			       tree orig_name, bool explicit_signed_p,
+			       bool plain_int_p)
 {
   tree type_mv;
   unsigned int max_width;
@@ -5877,6 +5899,7 @@ check_bitfield_type_and_width (location_t loc, tree *type, tree *width,
       && TREE_CODE (*type) != BOOLEAN_TYPE
       && TREE_CODE (*type) != ENUMERAL_TYPE)
     {
+      warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 6.1");
       error_at (loc, "bit-field %qs has invalid type", name);
       *type = unsigned_type_node;
     }
@@ -5886,10 +5909,8 @@ check_bitfield_type_and_width (location_t loc, tree *type, tree *width,
   if (type_mv != unsigned_type_node) {
 	warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 6.2");	
   }
-  if (type_mv == long_integer_type_node) {
-	warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 6.1");	
-  }
-  if (type_mv == integer_type_node) {
+  if (!misra_c_6_1_bitfield_type_ok (*type, explicit_signed_p,
+				     plain_int_p)) {
 	warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 6.1");
   }
 
@@ -7057,7 +7078,15 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
   /* Check the type and width of a bit-field.  */
   if (bitfield)
     {
-      check_bitfield_type_and_width (loc, &type, width, name);
+      bool plain_int_bitfield_p
+	= (!declspecs->explicit_signed_p
+	   && !declspecs->unsigned_p
+	   && !declspecs->typedef_p
+	   && (declspecs->typespec_word == cts_int
+	       || declspecs->default_int_p));
+      check_bitfield_type_and_width (loc, &type, width, name,
+				     declspecs->explicit_signed_p,
+				     plain_int_bitfield_p);
       /* C11 makes it implementation-defined (6.7.2.1#5) whether
 	 atomic types are permitted for bit-fields; we have no code to
 	 make bit-field accesses atomic, so disallow them.  */
