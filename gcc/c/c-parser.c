@@ -9096,17 +9096,16 @@ c_parser_postfix_expression (c_parser *parser)
     case CPP_CHAR32:
     case CPP_WCHAR:
             {
+        enum cpp_ttype token_type = c_parser_peek_token (parser)->type;
         tree value = c_parser_peek_token (parser)->value;
         c_parser_consume_token (parser);
         expr.value = value;
 
         /* MISRA：記住這是「字元常數」，讓 essential type 能區分它跟一般整數常數。  */
-        if (TREE_TYPE (value) == char_type_node
-            || TREE_TYPE (value) == signed_char_type_node
-            || TREE_TYPE (value) == unsigned_char_type_node)
-          expr.original_type = TREE_TYPE (value);
+        if (token_type == CPP_CHAR)
+          expr.original_type = char_type_node;
         else
-          expr.original_type = TREE_TYPE (value); /* 實務上通常也是 int，但我們用 original_type 當「char literal」記號 */
+          expr.original_type = TREE_TYPE (value);
 
         break;
       }

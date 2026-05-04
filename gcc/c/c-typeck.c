@@ -4674,6 +4674,85 @@ char_type_p (tree type)
 	  || type == char32_type_node);
 }
 
+static tree
+misra_10_2_c_expr_type (struct c_expr expr)
+{
+  if (expr.original_type)
+    return TYPE_MAIN_VARIANT (expr.original_type);
+  if (expr.value)
+    return TYPE_MAIN_VARIANT (TREE_TYPE (expr.value));
+  return NULL_TREE;
+}
+
+static bool
+misra_10_2_is_essentially_character_type (tree type)
+{
+  return type && TYPE_MAIN_VARIANT (type) == char_type_node;
+}
+
+static bool
+misra_10_2_is_signed_or_unsigned_rank_le_int (tree type)
+{
+  if (!type)
+    return false;
+
+  type = TYPE_MAIN_VARIANT (type);
+  if (misra_10_2_is_essentially_character_type (type)
+      || TREE_CODE (type) == BOOLEAN_TYPE
+      || TREE_CODE (type) == ENUMERAL_TYPE
+      || !INTEGRAL_TYPE_P (type))
+    return false;
+
+  return TYPE_PRECISION (type) <= TYPE_PRECISION (integer_type_node);
+}
+
+static bool
+misra_10_2_add_sub_is_appropriate (enum tree_code code,
+				   struct c_expr arg1,
+				   struct c_expr arg2)
+{
+  tree type1 = misra_10_2_c_expr_type (arg1);
+  tree type2 = misra_10_2_c_expr_type (arg2);
+  bool char1 = misra_10_2_is_essentially_character_type (type1);
+  bool char2 = misra_10_2_is_essentially_character_type (type2);
+  bool num1 = misra_10_2_is_signed_or_unsigned_rank_le_int (type1);
+  bool num2 = misra_10_2_is_signed_or_unsigned_rank_le_int (type2);
+
+  if (!char1 && !char2)
+    return true;
+
+  if (code == PLUS_EXPR)
+    return ((char1 && num2 && !char2)
+	    || (char2 && num1 && !char1));
+
+  if (code == MINUS_EXPR)
+    return (char1 && (num2 || char2));
+
+  return true;
+}
+
+static bool
+misra_10_2_add_sub_result_is_character (enum tree_code code,
+					struct c_expr arg1,
+					struct c_expr arg2)
+{
+  tree type1 = misra_10_2_c_expr_type (arg1);
+  tree type2 = misra_10_2_c_expr_type (arg2);
+  bool char1 = misra_10_2_is_essentially_character_type (type1);
+  bool char2 = misra_10_2_is_essentially_character_type (type2);
+  bool num1 = misra_10_2_is_signed_or_unsigned_rank_le_int (type1);
+  bool num2 = misra_10_2_is_signed_or_unsigned_rank_le_int (type2);
+
+  if (code == PLUS_EXPR)
+    return ((char1 && num2 && !char2)
+	    || (char2 && num1 && !char1));
+
+  if (code == MINUS_EXPR)
+    return (char1 && num2 && !char2);
+
+  return false;
+}
+
 /* This is the entry point used by the parser to build binary operators
    in the input.  CODE, a tree_code, specifies the binary operator, and
    ARG1 and ARG2 are the operands.  In addition to constructing the
@@ -4702,25 +4781,14 @@ parser_build_binary_op (location_t location, enum tree_code code,
                 ? arg2.original_type
                 : TREE_TYPE (arg2.value));
   
-  
-  if (arg1.original_type != NULL && Wmisra_c_trigger) {
-	if (misra_char_type_check(arg1.original_type)) {
-		misra_10_2.addr1 = (void *)arg1.original_type;
-	} else {
-		misra_10_2.addr1 = NULL;
-	}
-  } else {
-	misra_10_2.addr1 = NULL;
-  }
-  if (arg2.original_type != NULL && Wmisra_c_trigger) {
-        if (misra_char_type_check(arg2.original_type)) {
-                misra_10_2.addr2 = (void *)arg2.original_type;
-        } else {
-		misra_10_2.addr2 = NULL;
-	}
-  } else {
-        misra_10_2.addr2 = NULL;
-  }
+  misra_10_2.addr1 = NULL;
+  misra_10_2.addr2 = NULL;
+
+  if (Wmisra_c_trigger
+      && (code == PLUS_EXPR || code == MINUS_EXPR)
+      && !misra_10_2_add_sub_is_appropriate (code, arg1, arg2))
+    warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 10.2");
+
   if (Wmisra_c_trigger && arg1.original_type != NULL) {
 	if (arg2.original_type != NULL) {
 		if (arg1.original_type->base.code != arg2.original_type->base.code) {
@@ -4785,7 +4853,11 @@ parser_build_binary_op (location_t location, enum tree_code code,
   result.value = build_binary_op (location, code,
 				  arg1.value, arg2.value, 1);
   result.original_code = code;
-  result.original_type = NULL;
+  result.original_type
+    = (Wmisra_c_trigger
+       && (code == PLUS_EXPR || code == MINUS_EXPR)
+       && misra_10_2_add_sub_result_is_character (code, arg1, arg2))
+      ? char_type_node : NULL;
 
   if (TREE_CODE (result.value) == ERROR_MARK)
     {
