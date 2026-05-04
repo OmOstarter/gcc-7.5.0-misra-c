@@ -350,6 +350,12 @@ struct cpp_buffer
      token from the enclosing buffer is returned.  */
   unsigned int return_at_eof : 1;
 
+  /* MISRA C:2025 Rule 20.1: set when non-preprocessor, non-comment
+     content has been seen in this file before the current scan position.
+     Once set, all subsequent #include directives in this file violate
+     Rule 20.1 without needing to re-scan the buffer.  */
+  unsigned int misra_20_1_seen_code : 1;
+
   /* One for a system header, two for a C system header file that therefore
      needs to be extern "C" protected in C++, and zero otherwise.  */
   unsigned char sysp;
