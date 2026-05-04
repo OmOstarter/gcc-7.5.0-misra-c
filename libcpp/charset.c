@@ -1517,6 +1517,43 @@ converter_for_type (cpp_reader *pfile, enum cpp_ttype type)
 
    Returns true for success, false for failure.  */
 
+/* === MISRA C:2025 Rule 4.1 helper ==========================================
+   Scan raw source bytes [p, end) (content between quotes, without the
+   opening/closing quote characters).  Return true if any hex or octal
+   escape sequence is NOT terminated by another backslash escape or end
+   of the literal.  */
+static bool
+misra_4_1_has_unterminated_escape (const unsigned char *p,
+                                   const unsigned char *end)
+{
+  while (p < end)
+    {
+      if (*p != '\\') { p++; continue; }
+      p++;
+      if (p >= end) break;
+      if (*p == 'x' || *p == 'X')
+        {
+          p++;
+          while (p < end && ISXDIGIT ((unsigned char)*p))
+            p++;
+          if (p < end && *p != '\\')
+            return true;
+        }
+      else if (*p >= '0' && *p <= '7')
+        {
+          p++;
+          if (p < end && *p >= '0' && *p <= '7') p++;
+          if (p < end && *p >= '0' && *p <= '7') p++;
+          if (p < end && *p != '\\')
+            return true;
+        }
+      else
+        p++;
+    }
+  return false;
+}
+/* === end MISRA C:2025 Rule 4.1 helper ====================================== */
+
 static bool
 cpp_interpret_string_1 (cpp_reader *pfile, const cpp_string *from, size_t count,
 			cpp_string *to,  enum cpp_ttype type,
@@ -1528,55 +1565,29 @@ cpp_interpret_string_1 (cpp_reader *pfile, const cpp_string *from, size_t count,
   size_t i;
   struct cset_converter cvt = converter_for_type (pfile, type);
   
-  // MISRA-C 4.1 Rule
-  char *misra_escape = (char *)from->text;
-  int misra_check = 0;
-  /*
-  while (*misra_escape) {
-  	printf("%c\n", *misra_escape);
-	misra_escape++;
-  }
-  printf("%d\n", from->len);
-  */
-  misra_escape += from->len;
-  misra_escape -= 2;
-  if (*misra_escape >= '0' && *misra_escape <= '9') {
-        while (1) {
-                misra_check = 1;
-                misra_escape--;
-                if (*misra_escape == '\\') {
-                        break;
-                }
-                if (!(*misra_escape >= '0') && !(*misra_escape <= '9') && !(*misra_escape != 'x') ) {
-                        misra_check = 0;
-                        break;
-                }
+  /* === MISRA C:2025 Rule 4.1: check each string literal fragment === */
+  if (CPP_OPTION (pfile, Wmisra_cpp_trigger) && !cpp_in_system_header (pfile))
+    {
+      size_t fi;
+      for (fi = 0; fi < count; fi++)
+        {
+          const unsigned char *raw = from[fi].text;
+          size_t rawlen = from[fi].len;
+          /* Skip encoding prefix (L, u, U, u8) to find the opening quote. */
+          while (rawlen > 0 && *raw != '"' && *raw != '\'')
+            { raw++; rawlen--; }
+          /* Need at least opening quote + one char + closing quote. */
+          if (rawlen > 2)
+            {
+              raw++;    /* skip opening quote */
+              rawlen--;
+              /* content is raw[0 .. rawlen-2], closing quote at rawlen-1 */
+              if (misra_4_1_has_unterminated_escape (raw, raw + rawlen - 1))
+                cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 4.1");
+            }
         }
-        if (!misra_check) {
-                // break MISRA C:2025 Rule 4.1
-                cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
-        }
-  } else {
-	misra_check = from->len - 2;
-        if (*misra_escape >= 'A' && *misra_escape <= 'Z' || *misra_escape >= 'a' && *misra_escape <= 'z') {
-                while (misra_check && !(*misra_escape >= '0') && !(*misra_escape <= '9')) {
-                        misra_escape--;
-                        misra_check--;
-                }
-                if (*misra_escape >= '0' && *misra_escape <= '9') {
-                        while (misra_check) {
-                                misra_escape--;
-                                misra_check--;
-                                if (*misra_escape == 'x' && *(misra_escape - 1) == '\\') {
-                                        cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
-                                }
-                                if (*misra_escape == '\\') {
-                                        cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
-                                }
-                        }
-                }
-        }
-  }
+    }
+  /* === end MISRA C:2025 Rule 4.1 === */
   /* loc_readers and out must either be both NULL, or both be non-NULL.  */
   gcc_assert ((loc_readers != NULL) == (out != NULL));
 
@@ -1972,59 +1983,10 @@ cpp_interpret_charconst (cpp_reader *pfile, const cpp_token *token,
   cpp_string str = { 0, 0 };
   bool wide = (token->type != CPP_CHAR && token->type != CPP_UTF8CHAR);
   int u8 = 2 * int(token->type == CPP_UTF8CHAR);
-  int escape_sequences = 0;
-  int misra_check;
-  char *tmp_for_misra = NULL;
   cppchar_t result;
-  // MISRA 4.1 Rule
-  tmp_for_misra = (char *)token->val.str.text;
-  escape_sequences = token->val.str.len;
-  tmp_for_misra += escape_sequences;                  // let tmp_for_misra point to the token->val.str tail
-  tmp_for_misra-=2;
-  if (*tmp_for_misra >= '0' && *tmp_for_misra <= '9') {
-	while (1) {
-		misra_check = 1;
-		tmp_for_misra--;
-		if (*tmp_for_misra == '\\') {
-			break;
-		}
-		if (!(*tmp_for_misra >= '0') && !(*tmp_for_misra <= '9') && (*tmp_for_misra != 'x')) {
-			misra_check = 0;
-			break;	
-		}
-	}
-	if (!misra_check) {
-		cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");
-	}
-  } else {
-        tmp_for_misra--;
-	if ((*tmp_for_misra >= '0') && (*tmp_for_misra <= '9')) {
-        	cpp_error (pfile, CPP_DL_NOTE, "MISRA C:2025 Rule 4.1");   
-        }	
-  }
-  
-  /*
-  while (*tmp_for_misra) {
-	printf("%c\n", *tmp_for_misra++);
-  } 
-  printf("%d\n", token->val.str.len);
-  */
-  /*
-  while (*tmp_for_misra) {
-	if (*tmp_for_misra == '\'') {
-		tmp_for_misra++;
-	} else if (*tmp_for_misra == '\\') {
-		tmp_for_misra++;
-		if (*tmp_for_misra >= '1' && *tmp_for_misra <= '9') {
-			
-		} else if (*tmp_for_misra == 'x') {   // hexadecimal
-				
-		} else if (*tmp_for_misra == '0') {   // Octal
-			
-		}
-	}
-  }
-  */
+  /* MISRA C:2025 Rule 4.1 is checked inside cpp_interpret_string_1,
+     which is called below via cpp_interpret_string.  No duplicate check
+     needed here.  */
   /* An empty constant will appear as L'', u'', U'', u8'', or '' */
   if (token->val.str.len == (size_t) (2 + wide + u8))
     {
