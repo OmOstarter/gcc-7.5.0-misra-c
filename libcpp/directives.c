@@ -688,11 +688,14 @@ do_define (cpp_reader *pfile)
   if (CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
 	if (*misra_tmp_macro_name >= 'a' && *misra_tmp_macro_name <= 'z') {
         	for (int i = 0; i < c_keyword_number; i++) {
-                	if (!misra_compare_string((char *)misra_tmp_c_keyword[i], misra_tmp_macro_name)) {	
+                	if (!misra_compare_string((char *)misra_tmp_c_keyword[i], misra_tmp_macro_name)) {
 				cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.4\n");
                 	}
         	}
   	}
+	/* MISRA C:2025 Rule 5.10: macro name beginning with '_' is reserved */
+	if (*misra_tmp_macro_name == '_')
+	  cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 5.10");
   }
   misra_macro_20_10 = (unsigned char *)pfile->buffer->cur;
   if (CPP_OPTION(pfile, Wmisra_cpp_trigger)) {

@@ -3150,13 +3150,16 @@ pushdecl (tree x)
   {
 	if(TREE_CODE(x) == FUNCTION_DECL && !DECL_EXTERNAL(x))
 		hash_initialize();
-	else	
+	else
 	{
 		strcpy(var_name,(char *)IDENTIFIER_POINTER(name));
 		var_name[31]='\0';
 		hash_value=hash_value_compute(var_name);
 		hash_search_func(var_name,hash_value,current_scope->depth,locus);
 	}
+	/* MISRA C:2025 Rule 5.10: identifier beginning with '_' is reserved */
+	if (IDENTIFIER_POINTER(name)[0] == '_')
+	  warning_at(locus, OPT_Wmisra_c, "MISRA C:2025 Rule 5.10");
   }
   bool nested = false;
 
@@ -3330,9 +3333,16 @@ pushdecl (tree x)
 	    thistype = type;
 	  b->u.type = TREE_TYPE (b->decl);
 	  if (TREE_CODE (b->decl) == FUNCTION_DECL && DECL_BUILT_IN (b->decl))
-	    thistype
-	      = build_type_attribute_variant (thistype,
-					      TYPE_ATTRIBUTES (b->u.type));
+	    {
+	      /* MISRA C:2025 Rule 5.10: explicit redeclaration of a standard
+		 library function; the name is reserved by the C Standard.  */
+	      if (Wmisra_c_trigger && !DECL_IN_SYSTEM_HEADER (x)
+		  && !C_DECL_IMPLICIT (x))
+		warning_at (locus, OPT_Wmisra_c, "MISRA C:2025 Rule 5.10");
+	      thistype
+		= build_type_attribute_variant (thistype,
+						TYPE_ATTRIBUTES (b->u.type));
+	    }
 	  TREE_TYPE (b->decl) = thistype;
 	  bind (name, b->decl, scope, /*invisible=*/false, /*nested=*/true,
 		locus);
