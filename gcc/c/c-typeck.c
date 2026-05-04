@@ -9658,6 +9658,46 @@ pop_init_level (location_t loc, int implicit,
 	}
     }
 
+  /* MISRA C:2025 Rule 9.3: Arrays shall not be partially initialized.
+     Check before the switch below overwrites constructor_zeroinit, so
+     that {0} is correctly recognised as Exception 1 for non-integer
+     element types (e.g. float array[5] = {0}). */
+  if (Wmisra_c_trigger
+      && implicit == 0
+      && constructor_type
+      && TREE_CODE (constructor_type) == ARRAY_TYPE
+      && constructor_max_index != NULL_TREE
+      && tree_fits_uhwi_p (constructor_max_index)
+      /* String literal replaces the whole constructor: Exception 3 */
+      && !p->replacement_value.value
+      /* No explicit elements — rule precondition does not apply */
+      && !vec_safe_is_empty (constructor_elements))
+    {
+      unsigned HOST_WIDE_INT array_size =
+	tree_to_uhwi (constructor_max_index) + 1;
+      unsigned HOST_WIDE_INT explicit_count =
+	(unsigned HOST_WIDE_INT) vec_safe_length (constructor_elements);
+
+      if (explicit_count < array_size)
+	{
+	  /* Exception 1: { 0 } initializes all elements of any array type.
+	     constructor_elements stores the original (pre-digest_init) value,
+	     so integer_zerop correctly identifies the integer literal 0
+	     regardless of the target element type (e.g. float array[5]={0}). */
+	  bool exc1 = false;
+	  if (explicit_count == 1)
+	    {
+	      tree elt0 = (*constructor_elements)[0].value;
+	      exc1 = integer_zerop (elt0) || real_zerop (elt0);
+	    }
+	  /* Exception 2: only designated initializers — sparse init is OK */
+	  bool exc2 = !p->misra_96_has_positional;
+
+	  if (!exc1 && !exc2)
+	    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 9.3");
+	}
+    }
+
   switch (vec_safe_length (constructor_elements))
     {
     case 0:
