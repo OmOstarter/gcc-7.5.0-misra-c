@@ -2103,16 +2103,27 @@ warn_implicit_fallthrough_r (gimple_stmt_iterator *gsi_p, bool *handled_ops_p,
 	    else if (gimple_code (prev) == GIMPLE_LABEL
 		     && (label = gimple_label_label (as_a <glabel *> (prev)))
 		     && (l = find_label_entry (&labels, label)))
-	      warned_p = warning_at (l->loc, OPT_Wimplicit_fallthrough_,
-				     "this statement may fall through");
+	      {
+		warned_p = warning_at (l->loc, OPT_Wimplicit_fallthrough_,
+				       "this statement may fall through");
+		/* MISRA C:2025 Rule 16.1: switch clause lacks a terminator. */
+		if (Wmisra_c_trigger)
+		  warning_at (l->loc, OPT_Wmisra_c, "MISRA C:2025 Rule 16.1");
+	      }
 	    else if (!gimple_call_internal_p (prev, IFN_FALLTHROUGH)
 		     /* Try to be clever and don't warn when the statement
 			can't actually fall through.  */
 		     && gimple_stmt_may_fallthru (prev)
 		     && gimple_has_location (prev))
-	      warned_p = warning_at (gimple_location (prev),
-				     OPT_Wimplicit_fallthrough_,
-				     "this statement may fall through");
+	      {
+		warned_p = warning_at (gimple_location (prev),
+				       OPT_Wimplicit_fallthrough_,
+				       "this statement may fall through");
+		/* MISRA C:2025 Rule 16.1: switch clause lacks a terminator. */
+		if (Wmisra_c_trigger)
+		  warning_at (gimple_location (prev),
+			      OPT_Wmisra_c, "MISRA C:2025 Rule 16.1");
+	      }
 	    if (warned_p)
 	      inform (gimple_location (next), "here");
 
@@ -2137,7 +2148,7 @@ warn_implicit_fallthrough_r (gimple_stmt_iterator *gsi_p, bool *handled_ops_p,
 static void
 maybe_warn_implicit_fallthrough (gimple_seq seq)
 {
-  if (!warn_implicit_fallthrough)
+  if (!warn_implicit_fallthrough && !Wmisra_c_trigger)
     return;
 
   /* This warning is meant for C/C++/ObjC/ObjC++ only.  */
