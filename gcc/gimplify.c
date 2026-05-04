@@ -2109,6 +2109,9 @@ warn_implicit_fallthrough_r (gimple_stmt_iterator *gsi_p, bool *handled_ops_p,
 		/* MISRA C:2025 Rule 16.1: switch clause lacks a terminator. */
 		if (Wmisra_c_trigger)
 		  warning_at (l->loc, OPT_Wmisra_c, "MISRA C:2025 Rule 16.1");
+		/* MISRA C:2025 Rule 16.3: switch-clause not appropriately terminated. */
+		if (Wmisra_c_trigger)
+		  warning_at (l->loc, OPT_Wmisra_c, "MISRA C:2025 Rule 16.3");
 	      }
 	    else if (!gimple_call_internal_p (prev, IFN_FALLTHROUGH)
 		     /* Try to be clever and don't warn when the statement
@@ -2123,6 +2126,10 @@ warn_implicit_fallthrough_r (gimple_stmt_iterator *gsi_p, bool *handled_ops_p,
 		if (Wmisra_c_trigger)
 		  warning_at (gimple_location (prev),
 			      OPT_Wmisra_c, "MISRA C:2025 Rule 16.1");
+		/* MISRA C:2025 Rule 16.3: switch-clause not appropriately terminated. */
+		if (Wmisra_c_trigger)
+		  warning_at (gimple_location (prev),
+			      OPT_Wmisra_c, "MISRA C:2025 Rule 16.3");
 	      }
 	    if (warned_p)
 	      inform (gimple_location (next), "here");
