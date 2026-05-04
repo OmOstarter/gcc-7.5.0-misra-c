@@ -4732,28 +4732,6 @@ misra_10_2_add_sub_is_appropriate (enum tree_code code,
 }
 
 static bool
-misra_10_2_add_sub_result_is_character (enum tree_code code,
-					struct c_expr arg1,
-					struct c_expr arg2)
-{
-  tree type1 = misra_10_2_c_expr_type (arg1);
-  tree type2 = misra_10_2_c_expr_type (arg2);
-  bool char1 = misra_10_2_is_essentially_character_type (type1);
-  bool char2 = misra_10_2_is_essentially_character_type (type2);
-  bool num1 = misra_10_2_is_signed_or_unsigned_rank_le_int (type1);
-  bool num2 = misra_10_2_is_signed_or_unsigned_rank_le_int (type2);
-
-  if (code == PLUS_EXPR)
-    return ((char1 && num2 && !char2)
-	    || (char2 && num1 && !char1));
-
-  if (code == MINUS_EXPR)
-    return (char1 && num2 && !char2);
-
-  return false;
-}
-
-static bool
 misra_10_2_add_sub_result_is_character_type (enum tree_code code,
 					     tree type1, tree type2)
 {
@@ -4904,6 +4882,99 @@ misra_10_3_maybe_warn (location_t location, location_t expr_loc,
     warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
 }
 
+static bool
+misra_10_6_is_composite_operator (enum tree_code code)
+{
+  switch (code)
+    {
+    case PLUS_EXPR:
+    case MINUS_EXPR:
+    case MULT_EXPR:
+    case TRUNC_DIV_EXPR:
+    case CEIL_DIV_EXPR:
+    case FLOOR_DIV_EXPR:
+    case ROUND_DIV_EXPR:
+    case EXACT_DIV_EXPR:
+    case TRUNC_MOD_EXPR:
+    case CEIL_MOD_EXPR:
+    case FLOOR_MOD_EXPR:
+    case ROUND_MOD_EXPR:
+    case LSHIFT_EXPR:
+    case RSHIFT_EXPR:
+    case BIT_IOR_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_AND_EXPR:
+      return true;
+
+    default:
+      return false;
+    }
+}
+
+static bool
+misra_10_6_is_composite_expr (tree expr)
+{
+  return expr && misra_10_6_is_composite_operator (TREE_CODE (expr));
+}
+
+static tree
+misra_10_6_wider_type (tree type1, tree type2)
+{
+  return misra_10_3_type_rank (type1) >= misra_10_3_type_rank (type2)
+    ? type1 : type2;
+}
+
+static tree
+misra_10_6_composite_result_type (enum tree_code code, tree type1, tree type2)
+{
+  enum misra_10_3_category cat1;
+  enum misra_10_3_category cat2;
+
+  if (!misra_10_6_is_composite_operator (code) || !type1 || !type2)
+    return NULL_TREE;
+
+  if (misra_10_2_add_sub_result_is_character_type (code, type1, type2))
+    return char_type_node;
+
+  type1 = TYPE_MAIN_VARIANT (type1);
+  type2 = TYPE_MAIN_VARIANT (type2);
+  cat1 = misra_10_3_category_of_type (type1);
+  cat2 = misra_10_3_category_of_type (type2);
+
+  if (code == LSHIFT_EXPR || code == RSHIFT_EXPR)
+    return cat1 == MISRA_10_3_OTHER ? NULL_TREE : type1;
+
+  if (cat1 == MISRA_10_3_OTHER || cat1 != cat2)
+    return NULL_TREE;
+
+  return misra_10_6_wider_type (type1, type2);
+}
+
+static void
+misra_10_6_maybe_warn (location_t location, location_t expr_loc,
+		       tree lhs_type, tree rhs, tree rhs_origtype)
+{
+  enum misra_10_3_category lhs_cat;
+  enum misra_10_3_category rhs_cat;
+  location_t loc = expr_loc != UNKNOWN_LOCATION ? expr_loc : location;
+
+  if (!Wmisra_c_trigger
+      || !misra_10_6_is_composite_expr (rhs)
+      || !lhs_type
+      || !rhs_origtype)
+    return;
+
+  lhs_type = TYPE_MAIN_VARIANT (lhs_type);
+  rhs_origtype = TYPE_MAIN_VARIANT (rhs_origtype);
+  lhs_cat = misra_10_3_category_of_type (lhs_type);
+  rhs_cat = misra_10_3_category_of_type (rhs_origtype);
+
+  if (lhs_cat != MISRA_10_3_OTHER
+      && lhs_cat == rhs_cat
+      && misra_10_3_type_rank (lhs_type) > misra_10_3_type_rank (rhs_origtype))
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.6");
+}
+
 /* This is the entry point used by the parser to build binary operators
    in the input.  CODE, a tree_code, specifies the binary operator, and
    ARG1 and ARG2 are the operands.  In addition to constructing the
@@ -5005,10 +5076,9 @@ parser_build_binary_op (location_t location, enum tree_code code,
 				  arg1.value, arg2.value, 1);
   result.original_code = code;
   result.original_type
-    = (Wmisra_c_trigger
-       && (code == PLUS_EXPR || code == MINUS_EXPR)
-       && misra_10_2_add_sub_result_is_character (code, arg1, arg2))
-      ? char_type_node : NULL;
+    = Wmisra_c_trigger
+      ? misra_10_6_composite_result_type (code, type1, type2)
+      : NULL;
 
   if (TREE_CODE (result.value) == ERROR_MARK)
     {
@@ -8010,6 +8080,7 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
     return error_mark_node;
 
   misra_10_3_maybe_warn (location, expr_loc, type, rhs, origtype);
+  misra_10_6_maybe_warn (location, expr_loc, type, rhs, origtype);
 
   if (c_dialect_objc ())
     {
