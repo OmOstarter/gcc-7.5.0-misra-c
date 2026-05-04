@@ -3157,8 +3157,10 @@ pushdecl (tree x)
 		hash_value=hash_value_compute(var_name);
 		hash_search_func(var_name,hash_value,current_scope->depth,locus);
 	}
-	/* MISRA C:2025 Rule 5.10: identifier beginning with '_' is reserved */
-	if (IDENTIFIER_POINTER(name)[0] == '_')
+	/* MISRA C:2025 Rule 5.10: identifier beginning with '_' is reserved.
+	   Guard locus > BUILTINS_LOCATION to skip GCC's own built-in
+	   declarations which are registered at startup with location 1.  */
+	if (IDENTIFIER_POINTER(name)[0] == '_' && locus > BUILTINS_LOCATION)
 	  warning_at(locus, OPT_Wmisra_c, "MISRA C:2025 Rule 5.10");
   }
   bool nested = false;
