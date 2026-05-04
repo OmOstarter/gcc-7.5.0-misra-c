@@ -4753,6 +4753,157 @@ misra_10_2_add_sub_result_is_character (enum tree_code code,
   return false;
 }
 
+static bool
+misra_10_2_add_sub_result_is_character_type (enum tree_code code,
+					     tree type1, tree type2)
+{
+  bool char1 = misra_10_2_is_essentially_character_type (type1);
+  bool char2 = misra_10_2_is_essentially_character_type (type2);
+  bool num1 = misra_10_2_is_signed_or_unsigned_rank_le_int (type1);
+  bool num2 = misra_10_2_is_signed_or_unsigned_rank_le_int (type2);
+
+  if (code == PLUS_EXPR)
+    return ((char1 && num2 && !char2)
+	    || (char2 && num1 && !char1));
+
+  if (code == MINUS_EXPR)
+    return (char1 && num2 && !char2);
+
+  return false;
+}
+
+enum misra_10_3_category
+{
+  MISRA_10_3_OTHER = 0,
+  MISRA_10_3_BOOL,
+  MISRA_10_3_CHAR,
+  MISRA_10_3_SIGNED,
+  MISRA_10_3_UNSIGNED,
+  MISRA_10_3_ENUM,
+  MISRA_10_3_REAL,
+  MISRA_10_3_COMPLEX,
+  MISRA_10_3_POINTER
+};
+
+static enum misra_10_3_category
+misra_10_3_category_of_type (tree type)
+{
+  if (!type)
+    return MISRA_10_3_OTHER;
+
+  type = TYPE_MAIN_VARIANT (type);
+
+  if (TREE_CODE (type) == BOOLEAN_TYPE)
+    return MISRA_10_3_BOOL;
+  if (misra_10_2_is_essentially_character_type (type))
+    return MISRA_10_3_CHAR;
+  if (TREE_CODE (type) == ENUMERAL_TYPE)
+    return MISRA_10_3_ENUM;
+  if (TREE_CODE (type) == INTEGER_TYPE)
+    return TYPE_UNSIGNED (type) ? MISRA_10_3_UNSIGNED : MISRA_10_3_SIGNED;
+  if (TREE_CODE (type) == REAL_TYPE)
+    return MISRA_10_3_REAL;
+  if (TREE_CODE (type) == COMPLEX_TYPE)
+    return MISRA_10_3_COMPLEX;
+  if (TREE_CODE (type) == POINTER_TYPE)
+    return MISRA_10_3_POINTER;
+
+  return MISRA_10_3_OTHER;
+}
+
+static unsigned int
+misra_10_3_type_rank (tree type)
+{
+  if (!type)
+    return 0;
+
+  type = TYPE_MAIN_VARIANT (type);
+
+  if (TREE_CODE (type) == COMPLEX_TYPE)
+    type = TREE_TYPE (type);
+
+  if (INTEGRAL_TYPE_P (type) || SCALAR_FLOAT_TYPE_P (type))
+    return TYPE_PRECISION (type);
+
+  return 0;
+}
+
+static bool
+misra_10_3_integer_constant_fits_type (tree rhs, tree type)
+{
+  return rhs
+    && TREE_CODE (rhs) == INTEGER_CST
+    && type
+    && INTEGRAL_TYPE_P (type)
+    && int_fits_type_p (rhs, type);
+}
+
+static bool
+misra_10_3_real_to_complex_exception (tree lhs_type, tree rhs_type)
+{
+  if (!lhs_type || !rhs_type)
+    return false;
+
+  lhs_type = TYPE_MAIN_VARIANT (lhs_type);
+  rhs_type = TYPE_MAIN_VARIANT (rhs_type);
+
+  return TREE_CODE (lhs_type) == COMPLEX_TYPE
+    && TREE_CODE (rhs_type) == REAL_TYPE
+    && misra_10_3_type_rank (TREE_TYPE (lhs_type)) >= misra_10_3_type_rank (rhs_type);
+}
+
+static bool
+misra_10_3_assignment_is_compliant (tree lhs_type, tree rhs, tree rhs_origtype)
+{
+  tree rhs_type;
+  enum misra_10_3_category lhs_cat;
+  enum misra_10_3_category rhs_cat;
+
+  if (!lhs_type || !rhs)
+    return true;
+
+  lhs_type = TYPE_MAIN_VARIANT (lhs_type);
+  rhs_type = rhs_origtype ? TYPE_MAIN_VARIANT (rhs_origtype)
+			  : TYPE_MAIN_VARIANT (TREE_TYPE (rhs));
+
+  lhs_cat = misra_10_3_category_of_type (lhs_type);
+  rhs_cat = misra_10_3_category_of_type (rhs_type);
+
+  if (lhs_cat == MISRA_10_3_OTHER || rhs_cat == MISRA_10_3_OTHER)
+    return true;
+
+  if (misra_10_3_real_to_complex_exception (lhs_type, rhs_type))
+    return true;
+
+  if ((lhs_cat == MISRA_10_3_SIGNED || lhs_cat == MISRA_10_3_UNSIGNED)
+      && (rhs_cat == MISRA_10_3_SIGNED || rhs_cat == MISRA_10_3_UNSIGNED)
+      && TREE_CODE (rhs) == INTEGER_CST
+      && misra_10_3_integer_constant_fits_type (rhs, lhs_type))
+    return true;
+
+  if ((lhs_cat == MISRA_10_3_SIGNED || lhs_cat == MISRA_10_3_UNSIGNED)
+      && rhs_cat == MISRA_10_3_ENUM
+      && TREE_CODE (rhs) == INTEGER_CST
+      && misra_10_3_integer_constant_fits_type (rhs, lhs_type))
+    return true;
+
+  if (lhs_cat != rhs_cat)
+    return false;
+
+  return misra_10_3_type_rank (lhs_type) >= misra_10_3_type_rank (rhs_type);
+}
+
+static void
+misra_10_3_maybe_warn (location_t location, location_t expr_loc,
+		       tree lhs_type, tree rhs, tree rhs_origtype)
+{
+  location_t loc = expr_loc != UNKNOWN_LOCATION ? expr_loc : location;
+
+  if (Wmisra_c_trigger
+      && !misra_10_3_assignment_is_compliant (lhs_type, rhs, rhs_origtype))
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
+}
+
 /* This is the entry point used by the parser to build binary operators
    in the input.  CODE, a tree_code, specifies the binary operator, and
    ARG1 and ARG2 are the operands.  In addition to constructing the
@@ -7244,46 +7395,6 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
         misra_10_2.addr2 = NULL;
   }
   */
-  if (Wmisra_c_trigger && lhs_origtype != NULL && rhs_origtype != NULL) {
-	if (lhs_origtype->type_common.precision > rhs_origtype->type_common.precision) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.6");
-	} else if (rhs_origtype->type_common.precision > lhs_origtype->type_common.precision) {
-		if (lhs_origtype->type_common.precision == 8 && lhs_origtype->base.u.bits.unsigned_flag) { // 8bit unsigned int
-			if (rhs->int_cst.val[0] >= 0 && rhs->int_cst.val[0] < 256) {
-				;
-			} else {
-				warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-			}
-		} else if (lhs_origtype->type_common.precision == 8 && !lhs_origtype->base.u.bits.unsigned_flag) { // 8bit signed int
-			if (rhs->int_cst.val[0] >= -128 && rhs->int_cst.val[0] < 128) {
-				;
-			} else {
-				warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-			}	
-		} 
-		//warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-	if (misra_char_type_check(rhs_origtype) && !misra_char_type_check(lhs_origtype)) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-  }
-  if (Wmisra_c_trigger && lhs_origtype && rhs_origtype == NULL) {
-	if (misra_char_type_check(lhs_origtype) && !rhs->typed.type->base.u.bits.unsigned_flag) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-	if (lhs_origtype->base.code == INTEGER_TYPE && rhs->typed.type->base.code == REAL_TYPE) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-	if (lhs_origtype->base.code == BOOLEAN_TYPE && !rhs->typed.type->base.u.bits.unsigned_flag && rhs->int_cst.val[0] != 0 && rhs->int_cst.val[0] != 1) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-	if (lhs_origtype->type_common.precision != rhs->typed.type->type_common.precision && rhs->typed.type->type_common.precision == 64) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-	if (lhs_origtype->type_common.precision > rhs->typed.type->type_common.precision) {
-		warning_at(rhs_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 10.6");
-	}
-  } 
   /*
   if (Wmisra_c_trigger && lhs_origtype != NULL) {
         if (rhs_origtype != NULL) {
@@ -7393,9 +7504,11 @@ build_modify_expr (location_t location, tree lhs, tree lhs_origtype,
 	  newrhs = build_binary_op (location,
 				    modifycode, lhs, newrhs, 1);
 
-	  /* The original type of the right hand side is no longer
-	     meaningful.  */
-	  rhs_origtype = NULL_TREE;
+	  rhs_origtype = misra_10_2_add_sub_result_is_character_type
+	    (modifycode,
+	     lhs_origtype ? lhs_origtype : TREE_TYPE (lhs),
+	     rhs_origtype ? rhs_origtype : TREE_TYPE (rhs))
+	    ? char_type_node : NULL_TREE;
 	}
     }
 
@@ -7896,6 +8009,8 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
   if (coder == ERROR_MARK)
     return error_mark_node;
 
+  misra_10_3_maybe_warn (location, expr_loc, type, rhs, origtype);
+
   if (c_dialect_objc ())
     {
       int parmno;
@@ -8008,11 +8123,6 @@ convert_for_assignment (location_t location, location_t expr_loc, tree type,
 	      && (codel == INTEGER_TYPE || codel == ENUMERAL_TYPE)
 	      && (flag_sanitize & SANITIZE_FLOAT_CAST)))
 	in_late_binary_op = true;
-      if (Wmisra_c_trigger && rhs->base.code == PARM_DECL) {
-	if (type->type_common.precision != orig_rhs->typed.type->type_common.precision) {
-		warning_at(location, OPT_Wmisra_c, "MISRA C:2025 Rule 10.3");
-	}
-      }
       ret = convert_and_check (expr_loc != UNKNOWN_LOCATION
 			       ? expr_loc : location, type, orig_rhs);
       in_late_binary_op = save;
@@ -12064,7 +12174,8 @@ c_start_case (location_t switch_loc,
 /* Process a case label at location LOC.  */
 
 tree
-do_case (location_t loc, tree low_value, tree high_value)
+do_case (location_t loc, tree low_value, tree low_origtype,
+	 tree high_value, tree high_origtype)
 {
   tree label = NULL_TREE;
 
@@ -12097,6 +12208,13 @@ do_case (location_t loc, tree low_value, tree high_value)
 				    EXPR_LOCATION (c_switch_stack->switch_expr),
 				    loc))
     return NULL_TREE;
+
+  if (low_value)
+    misra_10_3_maybe_warn (loc, loc, c_switch_stack->orig_type,
+			   low_value, low_origtype);
+  if (high_value)
+    misra_10_3_maybe_warn (loc, loc, c_switch_stack->orig_type,
+			   high_value, high_origtype);
 
   label = c_add_case_label (loc, c_switch_stack->cases,
 			    SWITCH_COND (c_switch_stack->switch_expr),

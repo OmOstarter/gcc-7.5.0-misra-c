@@ -5257,24 +5257,26 @@ c_parser_label (c_parser *parser)
   bool fallthrough_p = c_parser_peek_token (parser)->flags & PREV_FALLTHROUGH;
   if (c_parser_next_token_is_keyword (parser, RID_CASE))
     {
-      tree exp1, exp2;
+      struct c_expr exp1, exp2;
       if (misra_index_16_5 + 2 <= MISRA_ARRAY_16_5_SIZE) {
         misra_array_16_5[misra_index_16_5++] = 1;
         misra_array_16_5[misra_index_16_5++] = (int)parser->tokens->location;
       }
       c_parser_consume_token (parser);
-      exp1 = c_parser_expr_no_commas (parser, NULL).value;
+      exp1 = c_parser_expr_no_commas (parser, NULL);
       if (c_parser_next_token_is (parser, CPP_COLON))
     {
       c_parser_consume_token (parser);
-      label = do_case (loc1, exp1, NULL_TREE);
+      label = do_case (loc1, exp1.value, exp1.original_type,
+		       NULL_TREE, NULL_TREE);
     }
       else if (c_parser_next_token_is (parser, CPP_ELLIPSIS))
     {
       c_parser_consume_token (parser);
-      exp2 = c_parser_expr_no_commas (parser, NULL).value;
+      exp2 = c_parser_expr_no_commas (parser, NULL);
       if (c_parser_require (parser, CPP_COLON, "expected %<:%>"))
-        label = do_case (loc1, exp1, exp2);
+        label = do_case (loc1, exp1.value, exp1.original_type,
+			 exp2.value, exp2.original_type);
     }
       else
     c_parser_error (parser, "expected %<:%> or %<...%>");
@@ -5288,7 +5290,7 @@ c_parser_label (c_parser *parser)
       c_parser_consume_token (parser);
       misra_default_16_4 = 1;
       if (c_parser_require (parser, CPP_COLON, "expected %<:%>"))
-    label = do_case (loc1, NULL_TREE, NULL_TREE);
+    label = do_case (loc1, NULL_TREE, NULL_TREE, NULL_TREE, NULL_TREE);
     }
   else
     {
