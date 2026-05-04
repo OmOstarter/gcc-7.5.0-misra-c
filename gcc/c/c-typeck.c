@@ -507,6 +507,104 @@ misra_11_3_maybe_warn (location_t loc, tree target_type, tree source_type)
     warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.3");
 }
 
+static const char *
+misra_type_name_cstr (tree type)
+{
+  tree name;
+
+  if (!type)
+    return NULL;
+
+  name = TYPE_NAME (type);
+  if (!name)
+    return NULL;
+
+  if (TREE_CODE (name) == TYPE_DECL)
+    name = DECL_NAME (name);
+
+  if (name && TREE_CODE (name) == IDENTIFIER_NODE)
+    return IDENTIFIER_POINTER (name);
+
+  return NULL;
+}
+
+static bool
+misra_11_6_is_intptr_type (tree type)
+{
+  const char *name = misra_type_name_cstr (type);
+
+  return name
+    && (strcmp (name, "intptr_t") == 0
+	|| strcmp (name, "uintptr_t") == 0);
+}
+
+static bool
+misra_11_6_is_void_pointer_type (tree type)
+{
+  tree target;
+
+  if (!type || TREE_CODE (type) != POINTER_TYPE)
+    return false;
+
+  target = TYPE_MAIN_VARIANT (TREE_TYPE (type));
+  return VOID_TYPE_P (target);
+}
+
+static bool
+misra_11_6_is_arithmetic_type (tree type)
+{
+  if (!type)
+    return false;
+
+  type = TYPE_MAIN_VARIANT (type);
+  return (TREE_CODE (type) == INTEGER_TYPE
+	  || TREE_CODE (type) == BOOLEAN_TYPE
+	  || TREE_CODE (type) == ENUMERAL_TYPE
+	  || TREE_CODE (type) == REAL_TYPE
+	  || TREE_CODE (type) == COMPLEX_TYPE
+	  || TREE_CODE (type) == FIXED_POINT_TYPE);
+}
+
+static bool
+misra_11_6_is_zero_integer_constant (tree expr)
+{
+  return expr
+    && TREE_CODE (expr) == INTEGER_CST
+    && integer_zerop (expr)
+    && INTEGRAL_TYPE_P (TREE_TYPE (expr));
+}
+
+static bool
+misra_11_6_cast_is_compliant (tree target_type, tree source_type, tree expr)
+{
+  bool target_is_void_pointer = misra_11_6_is_void_pointer_type (target_type);
+  bool source_is_void_pointer = misra_11_6_is_void_pointer_type (source_type);
+  bool target_is_arithmetic = misra_11_6_is_arithmetic_type (target_type);
+  bool source_is_arithmetic = misra_11_6_is_arithmetic_type (source_type);
+
+  if (target_is_void_pointer && source_is_arithmetic)
+    {
+      if (misra_11_6_is_zero_integer_constant (expr))
+	return true;
+      return misra_11_6_is_intptr_type (source_type);
+    }
+
+  if (source_is_void_pointer && target_is_arithmetic)
+    return misra_11_6_is_intptr_type (target_type);
+
+  return true;
+}
+
+static void
+misra_11_6_maybe_warn (location_t loc, tree target_type, tree source_type,
+		       tree expr)
+{
+  if (Wmisra_c_trigger
+      && loc
+      && !misra_11_6_cast_is_compliant (target_type, source_type, expr))
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.6");
+}
+
 /* MISRA C:2025 Rule 11.9: Return true if EXPR is an integer-type null pointer
    constant that was NOT expanded from the NULL macro.  A (void*)0 form always
    returns false (compliant by rule).  */
@@ -7114,6 +7212,7 @@ tree
 build_c_cast (location_t loc, tree type, tree expr)
 {
   tree value;
+  tree cast_type;
 
   if (TREE_CODE (expr) == EXCESS_PRECISION_EXPR)
     expr = TREE_OPERAND (expr, 0);
@@ -7122,6 +7221,8 @@ build_c_cast (location_t loc, tree type, tree expr)
 
   if (type == error_mark_node || expr == error_mark_node)
     return error_mark_node;
+
+  cast_type = type;
 
   /* The ObjC front-end uses TYPE_MAIN_VARIANT to tie together types differing
      only in <protocol> qualifications.  But when constructing cast expressions,
@@ -7245,6 +7346,7 @@ build_c_cast (location_t loc, tree type, tree expr)
 	      type1=type;
 	      type2=otype;
 	      misra_11_3_maybe_warn (loc, type1, type2);
+	      misra_11_6_maybe_warn (loc, cast_type, type2, value);
 	      type1=type;
 	      type2=otype;
       while(TREE_CODE(type2)==POINTER_TYPE)
@@ -7258,19 +7360,17 @@ build_c_cast (location_t loc, tree type, tree expr)
 			warning_flag[3]=1;
 		while(TREE_CODE(type2)==POINTER_TYPE)
 			type2=TREE_TYPE(type2);
-      		if(TREE_CODE(type2)==VOID_TYPE&&TREE_CODE(type1)==INTEGER_TYPE)
-			warning_flag[5]=1;
-      }
+	      }
       type2=otype;
       if(TREE_CODE(type1)==POINTER_TYPE)
       {
 		if(TREE_CODE(type2)==INTEGER_TYPE||TREE_CODE(type2)==BOOLEAN_TYPE||TREE_CODE(type2)==ENUMERAL_TYPE)
 			warning_flag[3]=1;
 		while(TREE_CODE(type1)==POINTER_TYPE)
+		  {
 			type1=TREE_TYPE(type1);
-		if(TREE_CODE(type1)==VOID_TYPE&&TREE_CODE(type2)==INTEGER_TYPE)
-			warning_flag[5]=1;
-		if(TREE_CODE(type1)==VOID_TYPE&&TREE_CODE(type2)==INTEGER_TYPE&&num.to_shwi()==0)
+		  }
+			if(TREE_CODE(type1)==VOID_TYPE&&TREE_CODE(type2)==INTEGER_TYPE&&num.to_shwi()==0)
 		{
 			warning_flag[3]=0;
 			warning_flag[5]=0;
