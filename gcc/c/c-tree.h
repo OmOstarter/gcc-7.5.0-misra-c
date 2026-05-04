@@ -297,6 +297,8 @@ struct c_declspecs {
      specifier, in bytes, or -1 if no such specifiers with nonzero
      alignment.  */
   int align_log;
+  /* The number of explicit _Alignas specifiers in this declaration.  */
+  unsigned int alignas_count;
   /* For the __intN declspec, this stores the index into the int_n_* arrays.  */
   int int_n_idx;
   /* For the _FloatN and _FloatNx declspec, this stores the index into

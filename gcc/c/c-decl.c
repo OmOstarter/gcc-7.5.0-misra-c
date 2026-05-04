@@ -7119,6 +7119,15 @@ grokdeclarator (const struct c_declarator *declarator,								//17.6
   /* Reject invalid uses of _Alignas.  */
   if (declspecs->alignas_p)
     {
+      if (Wmisra_c_trigger
+	  && decl_context == NORMAL
+	  && TREE_CODE (type) != FUNCTION_TYPE
+	  && storage_class != csc_typedef
+	  && declspecs->alignas_count > 1)
+	warning_at (expansion_point_location_if_in_system_header
+		    (declspecs->locations[cdw_alignas]),
+		    OPT_Wmisra_c, "MISRA C:2025 Rule 8.17");
+
       if (storage_class == csc_typedef)
 	error_at (loc, "alignment specified for typedef %qE", name);
       else if (storage_class == csc_register)
@@ -11491,16 +11500,11 @@ declspecs_add_alignas (source_location loc,
 {
   int align_log;
   specs->alignas_p = true;
+  specs->alignas_count++;
   specs->locations[cdw_alignas] = loc;
   if (align == error_mark_node)
     return specs;
   align_log = check_user_alignment (align, true);
-    if (align_log == 2)
-  {
-    source_location effective_loc = (loc == 0 ? input_location : loc);
-    warning_at (effective_loc, OPT_Wmisra_c,
-      "MISRA C:2025 Rule 8.17");
-  }
   
   if (align_log > specs->align_log)
     specs->align_log = align_log;
