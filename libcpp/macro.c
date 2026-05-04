@@ -27,6 +27,8 @@ along with this program; see the file COPYING3.  If not see
 #include "cpplib.h"
 #include "internal.h"
 #define HASH_SIZE 30000
+#define MISRA_SIGNIFICANT_ID_CHARS_C90 31
+#define MISRA_SIGNIFICANT_ID_CHARS 63
 #define SYNTAX_WARNING_AT(loc, msgid) \
   do { cpp_error_with_line (pfile, CPP_DL_NOTE, (loc), 0, msgid); ; } \
   while(0)
@@ -41,7 +43,7 @@ unsigned int hash_value_compute(char *key)						//5.4
         return value % HASH_SIZE;
 }
 struct node{
-	char key[64];
+	char key[MISRA_SIGNIFICANT_ID_CHARS + 1];
 	int used_flag;
 };
 struct node HASH_TABLE[HASH_SIZE];
@@ -3730,12 +3732,21 @@ _cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
   unsigned int hash_value;
   if(node && macro->syshdr==0 && CPP_OPTION(pfile,Wmisra_cpp_trigger))
   {
-        strcpy(var_name,(char *)NODE_NAME(node));
-        var_name[31]='\0';
+        const char *macro_name = (const char *) NODE_NAME(node);
+        strncpy(var_name, macro_name, MISRA_SIGNIFICANT_ID_CHARS);
+        var_name[MISRA_SIGNIFICANT_ID_CHARS]='\0';
         hash_value=hash_value_compute(var_name);
         if(hash_search_macro(var_name,hash_value)==1)
 		//fprintf(stderr,"macro declaration %s fail. Rule 5.4 violation\n",(char *)NODE_NAME(node));
 		cpp_warning (pfile,CPP_W_NONE,"MISRA C:2025 Rule 5.4\n");
+        if (strlen (macro_name) > MISRA_SIGNIFICANT_ID_CHARS_C90)
+          {
+            strncpy(var_name, macro_name, MISRA_SIGNIFICANT_ID_CHARS_C90);
+            var_name[MISRA_SIGNIFICANT_ID_CHARS_C90]='\0';
+            hash_value=hash_value_compute(var_name);
+            if(hash_search_macro(var_name,hash_value)==1)
+              cpp_warning (pfile,CPP_W_NONE,"MISRA C:2025 Rule 5.4\n");
+          }
   }
     // if(cpp_sys_macro_p(pfile))
 		//  fprintf(stderr,"%s\n",NODE_NAME(node));

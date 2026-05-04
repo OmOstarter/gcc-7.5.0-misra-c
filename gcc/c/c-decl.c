@@ -58,10 +58,12 @@ along with GCC; see the file COPYING3.  If not see
 extern bool trigger_9_5;
 location_t loc9_5;
 #define HASH_SIZE 30000
+#define MISRA_SIGNIFICANT_ID_CHARS_C90 31
+#define MISRA_SIGNIFICANT_ID_CHARS_C99 63
 extern unsigned int hash_value_compute(char *key);
 extern int hash_search(char *key,int value);
 struct node{
-	char key[31];
+	char key[MISRA_SIGNIFICANT_ID_CHARS_C99 + 1];
 	int used_flag;
 };
 
@@ -3145,15 +3147,18 @@ pushdecl (tree x)
   struct c_binding *b;
   location_t locus = DECL_SOURCE_LOCATION(x);
   unsigned int hash_value;
-  char var_name[100];
+  char var_name[MISRA_SIGNIFICANT_ID_CHARS_C99 + 1];
   if(x && name && DECL_NAME(x) && !DECL_IN_SYSTEM_HEADER(x) && locus && Wmisra_c_trigger)
   {
 	if(TREE_CODE(x) == FUNCTION_DECL && !DECL_EXTERNAL(x))
 		hash_initialize();
 	else
 	{
-		strcpy(var_name,(char *)IDENTIFIER_POINTER(name));
-		var_name[31]='\0';
+		int significant_id_chars = flag_isoc99
+					   ? MISRA_SIGNIFICANT_ID_CHARS_C99
+					   : MISRA_SIGNIFICANT_ID_CHARS_C90;
+		strncpy(var_name, IDENTIFIER_POINTER(name), significant_id_chars);
+		var_name[significant_id_chars]='\0';
 		hash_value=hash_value_compute(var_name);
 		hash_search_func(var_name,hash_value,current_scope->depth,locus);
 	}
