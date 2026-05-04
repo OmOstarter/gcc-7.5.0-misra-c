@@ -5282,6 +5282,26 @@ finish_decl (tree decl, location_t init_loc, tree init,
 	}
 	misra_pointer_counter = 0;
   }
+  /* MISRA C:2025 Rule 8.18: no tentative definitions in a header file.
+     A file-scope VAR_DECL without an initializer and without 'extern'
+     is a tentative definition; flag it when the source is a user
+     header (".h") and not a system header.  */
+  if (Wmisra_c_trigger
+      && VAR_P (decl)
+      && DECL_FILE_SCOPE_P (decl)
+      && !DECL_EXTERNAL (decl)
+      && init == NULL_TREE
+      && !DECL_IN_SYSTEM_HEADER (decl))
+    {
+      const char *fname = DECL_SOURCE_FILE (decl);
+      if (fname != NULL)
+	{
+	  const char *dot = strrchr (fname, '.');
+	  if (dot != NULL && strcmp (dot, ".h") == 0)
+	    warning_at (DECL_SOURCE_LOCATION (decl),
+		       OPT_Wmisra_c, "MISRA C:2025 Rule 8.18");
+	}
+    }
   /* If a name was specified, get the string.  */
   if (VAR_OR_FUNCTION_DECL_P (decl)
       && DECL_FILE_SCOPE_P (decl))
