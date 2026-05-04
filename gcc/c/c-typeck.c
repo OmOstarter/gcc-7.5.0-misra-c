@@ -10120,6 +10120,13 @@ set_init_label (location_t loc, tree fieldname, location_t fieldname_loc,
    existing initializer.  */
 
 static void
+misra_c_9_4_warning (location_t loc, bool implicit)
+{
+  if (Wmisra_c_trigger && !implicit)
+    warning_at (loc, OPT_Wmisra_c, "MISRA C:2025 Rule 9.4");
+}
+
+static void
 add_pending_init (location_t loc, tree purpose, tree value, tree origtype,
 		  bool implicit, struct obstack *braced_init_obstack)
 {
@@ -10141,6 +10148,7 @@ add_pending_init (location_t loc, tree purpose, tree value, tree origtype,
 	    {
 	      if (!implicit)
 		{
+		  misra_c_9_4_warning (loc, implicit);
 		  if (TREE_SIDE_EFFECTS (p->value))
 		    warning_init (loc, OPT_Woverride_init_side_effects,
 				  "initialized field with side-effects "
@@ -10171,6 +10179,7 @@ add_pending_init (location_t loc, tree purpose, tree value, tree origtype,
 	    {
 	      if (!implicit)
 		{
+		  misra_c_9_4_warning (loc, implicit);
 		  if (TREE_SIDE_EFFECTS (p->value))
 		    warning_init (loc, OPT_Woverride_init_side_effects,
 				  "initialized field with side-effects "
@@ -10714,6 +10723,7 @@ output_init_element (location_t loc, tree value, tree origtype,
     {
       if (!implicit)
 	{
+	  misra_c_9_4_warning (loc, implicit);
 	  if (TREE_SIDE_EFFECTS (constructor_elements->last ().value))
 	    warning_init (loc, OPT_Woverride_init_side_effects,
 			  "initialized field with side-effects overwritten");
