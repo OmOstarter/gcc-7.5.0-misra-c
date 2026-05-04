@@ -3727,6 +3727,92 @@ _cpp_create_definition (cpp_reader *pfile, cpp_hashnode *node)
      conditional flag */
   node->flags &= ~NODE_CONDITIONAL;
 
+  /* MISRA C:2025 Rule 20.7: expressions resulting from macro parameter
+     expansion shall be appropriately delimited.  For each parameter
+     reference in the replacement list that is used as an expression (i.e.
+     not stringified, not token-pasted, not used as a member name), both
+     the immediately preceding and following tokens must be one of
+     (, ), [, ], {, }, or ,.  */
+  if (CPP_OPTION (pfile, Wmisra_cpp_trigger)
+      && !macro->syshdr
+      && !(node->flags & NODE_BUILTIN)
+      && macro->fun_like
+      && macro->paramc > 0
+      && !macro->traditional)
+    {
+      /* Skip macros defined in built-in or command-line pseudo-files
+         (their path starts with '<', e.g. "<built-in>").  */
+      const char *mfname =
+        linemap_get_expansion_filename (pfile->line_table, macro->line);
+      if (!mfname || mfname[0] == '<')
+        goto misra_20_7_done;
+
+      {
+      unsigned int n = macro->count;
+      cpp_token *toks = macro->exp.tokens;
+      unsigned int ii;
+
+      for (ii = 0; ii < n; ii++)
+        {
+          cpp_token *tok = &toks[ii];
+          unsigned int jj;
+          bool left_ok, right_ok;
+
+          if (tok->type != CPP_MACRO_ARG)
+            continue;
+
+          /* Skip #param (stringification).  */
+          if (tok->flags & STRINGIFY_ARG)
+            continue;
+
+          /* Skip param ## ... (this token is LHS of paste operator).  */
+          if (tok->flags & PASTE_LEFT)
+            continue;
+
+          /* Skip ... ## param (preceding token is LHS of paste operator).  */
+          if (ii > 0 && (toks[ii - 1].flags & PASTE_LEFT))
+            continue;
+
+          /* Skip struct.param or ptr->param (used as member name, not
+             an expression).  */
+          if (ii > 0 && (toks[ii - 1].type == CPP_DOT
+                         || toks[ii - 1].type == CPP_DEREF))
+            continue;
+
+          /* Check left delimiter.  */
+          left_ok = (ii > 0)
+            && (toks[ii - 1].type == CPP_OPEN_PAREN
+                || toks[ii - 1].type == CPP_CLOSE_PAREN
+                || toks[ii - 1].type == CPP_OPEN_SQUARE
+                || toks[ii - 1].type == CPP_CLOSE_SQUARE
+                || toks[ii - 1].type == CPP_OPEN_BRACE
+                || toks[ii - 1].type == CPP_CLOSE_BRACE
+                || toks[ii - 1].type == CPP_COMMA);
+
+          /* Find the next real token (skip CPP_PASTE bookkeeping tokens
+             that may appear at the end of the list for consecutive ##).  */
+          jj = ii + 1;
+          while (jj < n && toks[jj].type == CPP_PASTE)
+            jj++;
+
+          /* Check right delimiter.  */
+          right_ok = (jj < n)
+            && (toks[jj].type == CPP_OPEN_PAREN
+                || toks[jj].type == CPP_CLOSE_PAREN
+                || toks[jj].type == CPP_OPEN_SQUARE
+                || toks[jj].type == CPP_CLOSE_SQUARE
+                || toks[jj].type == CPP_OPEN_BRACE
+                || toks[jj].type == CPP_CLOSE_BRACE
+                || toks[jj].type == CPP_COMMA);
+
+          if (!left_ok || !right_ok)
+            cpp_warning_with_line (pfile, CPP_W_NONE, tok->src_loc, 0,
+                                   "MISRA C:2025 Rule 20.7");
+        }
+      } /* end inner block */
+    misra_20_7_done:;
+    }
+
   return ok;
 }
 
