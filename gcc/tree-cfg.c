@@ -8976,7 +8976,7 @@ pass_warn_function_return::execute (function *fun)
 
   /* If we see "return;" in some basic block, then we do reach the end
      without returning a value.  */
-  else if (warn_return_type
+  else if ((warn_return_type || Wmisra_c_trigger)
 	   && !TREE_NO_WARNING (fun->decl)
 	   && !VOID_TYPE_P (TREE_TYPE (TREE_TYPE (fun->decl))))
     {
@@ -8991,8 +8991,12 @@ pass_warn_function_return::execute (function *fun)
 	      location = gimple_location (last);
 	      if (location == UNKNOWN_LOCATION)
 		location = fun->function_end_locus;
-	      warning_at (location, OPT_Wreturn_type,
-			  "control reaches end of non-void function");
+	      if (warn_return_type)
+		warning_at (location, OPT_Wreturn_type,
+			    "control reaches end of non-void function");
+	      if (Wmisra_c_trigger)
+		warning_at (location, OPT_Wmisra_c,
+			    "MISRA C:2025 Rule 17.4");
 	      TREE_NO_WARNING (fun->decl) = 1;
 	      break;
 	    }
