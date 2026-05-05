@@ -7679,8 +7679,19 @@ c_parser_binary_expression (c_parser *parser, struct c_expr *after,
       goto out;
     }
       binary_loc = c_parser_peek_token (parser)->location;
+      /* MISRA C:2025 Rule 12.1: Case 2 — left operand formed by higher-prec
+	 operator (e.g. a*b + c without explicit parentheses around a*b).  */
+      if (Wmisra_c_trigger
+	  && stack[sp].prec > oprec
+	  && stack[sp].prec != PREC_NONE)
+	warning_at (binary_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 12.1");
       while (oprec <= stack[sp].prec)
     POP;
+      /* MISRA C:2025 Rule 12.1: Case 1 — right operand will be formed by
+	 higher-prec operator (e.g. a + b*c without explicit parentheses).  */
+      if (Wmisra_c_trigger
+	  && stack[sp].prec != PREC_NONE)
+	warning_at (binary_loc, OPT_Wmisra_c, "MISRA C:2025 Rule 12.1");
       c_parser_consume_token (parser);
       switch (ocode)
     {
