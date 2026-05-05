@@ -203,8 +203,9 @@ fe_file_change (const line_map_ordinary *new_map)
 	    line = SOURCE_LINE (new_map - 1, included_at);
 
 	  /* MISRA C:2025 Rule 17.1: <stdarg.h> shall not be used.
+	     MISRA C:2025 Rule 21.12: <fenv.h> shall not be used.
 	     Only warn when the #include appears in user code, not in a
-	     system header that transitively pulls in stdarg.h.  */
+	     system header that transitively pulls in these headers.  */
 	  if (Wmisra_c_trigger
 	      && included_at > BUILTINS_LOCATION
 	      && !LINEMAP_SYSP (new_map - 1))
@@ -215,6 +216,9 @@ fe_file_change (const line_map_ordinary *new_map)
 	      if (strcmp (base, "stdarg.h") == 0)
 		warning_at ((location_t) included_at, OPT_Wmisra_c,
 			    "MISRA C:2025 Rule 17.1");
+	      if (strcmp (base, "fenv.h") == 0)
+		warning_at ((location_t) included_at, OPT_Wmisra_c,
+			    "MISRA C:2025 Rule 21.12");
 	    }
 
 	  input_location = new_map->start_location;
