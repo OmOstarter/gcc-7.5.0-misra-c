@@ -202,6 +202,21 @@ fe_file_change (const line_map_ordinary *new_map)
 	  if (included_at > BUILTINS_LOCATION)
 	    line = SOURCE_LINE (new_map - 1, included_at);
 
+	  /* MISRA C:2025 Rule 17.1: <stdarg.h> shall not be used.
+	     Only warn when the #include appears in user code, not in a
+	     system header that transitively pulls in stdarg.h.  */
+	  if (Wmisra_c_trigger
+	      && included_at > BUILTINS_LOCATION
+	      && !LINEMAP_SYSP (new_map - 1))
+	    {
+	      const char *fname = LINEMAP_FILE (new_map);
+	      const char *base = strrchr (fname, '/');
+	      base = base ? base + 1 : fname;
+	      if (strcmp (base, "stdarg.h") == 0)
+		warning_at ((location_t) included_at, OPT_Wmisra_c,
+			    "MISRA C:2025 Rule 17.1");
+	    }
+
 	  input_location = new_map->start_location;
 	  (*debug_hooks->start_source_file) (line, LINEMAP_FILE (new_map));
 #ifndef NO_IMPLICIT_EXTERN_C
