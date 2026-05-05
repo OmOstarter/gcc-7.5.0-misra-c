@@ -1995,8 +1995,6 @@ maybe_warn_unused_local_typedefs (void)
     {
       FOR_EACH_VEC_SAFE_ELT (l->local_typedefs, i, decl)
 	if (!TREE_USED (decl)) {
-	  if (Wmisra_c_trigger)
-	  	warning_at(input_location, OPT_Wmisra_c, "MISRA C:2025 Rule 12.4");
 	  warning_at (DECL_SOURCE_LOCATION (decl),
 		      OPT_Wmisra_c,
 		      "MISRA C:2025 Rule 2.3", decl);

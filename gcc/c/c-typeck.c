@@ -14419,16 +14419,6 @@ build_binary_op (location_t location, enum tree_code code,
       else if (doing_shift && (flag_sanitize & SANITIZE_SHIFT))
 	instrument_expr = ubsan_instrument_shift (location, code, op0, op1);
     }
-  /*
-  if (Wmisra_c_trigger) {
-  	if (orig_op0->base.code == INTEGER_CST && orig_op1->base.code == INTEGER_CST) {
-		misra_const_integer_value = *((struct tree_int_cst *)orig_op0)->val + *((struct tree_int_cst *)orig_op1)->val;
-  	}
-	if (misra_const_integer_value != *((struct tree_int_cst *)ret)->val) {
-		warning_at(location, OPT_Wmisra_c, "MISRA C:2025 Rule 12.4");
-	}
-  }
-  */
   /* Treat expressions in initializers specially as they can't trap.  */
   if (int_const_or_overflow)
     ret = (require_constant_value
@@ -14458,21 +14448,30 @@ build_binary_op (location_t location, enum tree_code code,
   if (semantic_result_type)
     ret = build1_loc (location, EXCESS_PRECISION_EXPR,
 		      semantic_result_type, ret);
-  if (Wmisra_c_trigger) {
-        if (orig_op0->base.code == INTEGER_CST && orig_op1->base.code == INTEGER_CST) {
-                misra_const_integer_value = *((struct tree_int_cst *)orig_op0)->val + *((struct tree_int_cst *)orig_op1)->val;
-		if (code == MINUS_EXPR || code == PLUS_EXPR) {
-			if (misra_const_integer_value != *((struct tree_int_cst *)ret)->val) {
-                		warning_at(location, OPT_Wmisra_c, "MISRA C:2025 Rule 12.4");
-        		}
-		}
-        }
-	/*
-        if (misra_const_integer_value != *((struct tree_int_cst *)ret)->val) {
-                warning_at(location, OPT_Wmisra_c, "MISRA C:2025 Rule 12.4");
-        }
-	*/
-  }
+  /* MISRA C:2025 Rule 12.4: unsigned integer wrap-around in constant expressions.
+     Compute the expected result in widest_int (no truncation) and compare
+     against the actual (truncated) result.  */
+  if (Wmisra_c_trigger
+      && TREE_CODE (orig_op0) == INTEGER_CST
+      && TREE_CODE (orig_op1) == INTEGER_CST
+      && TREE_CODE (ret) == INTEGER_CST
+      && TYPE_UNSIGNED (TREE_TYPE (ret)))
+    {
+      widest_int wi0 = wi::to_widest (orig_op0);
+      widest_int wi1 = wi::to_widest (orig_op1);
+      widest_int wi_ret = wi::to_widest (ret);
+      widest_int expected;
+      bool do_check = true;
+      switch (code)
+	{
+	case PLUS_EXPR:  expected = wi0 + wi1; break;
+	case MINUS_EXPR: expected = wi0 - wi1; break;
+	case MULT_EXPR:  expected = wi0 * wi1; break;
+	default:         do_check = false;     break;
+	}
+      if (do_check && wi::ne_p (wi_ret, expected))
+	warning_at (location, OPT_Wmisra_c, "MISRA C:2025 Rule 12.4");
+    }
   return ret;
 }
 
