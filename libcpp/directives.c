@@ -979,12 +979,9 @@ parse_include (cpp_reader *pfile, int *pangle_brackets,
   else
     {
       const unsigned char *dir;
-      misra_c_tmp_header_text = (char *)header->val.str.text;
-      if (*misra_c_tmp_header_text == '"' || *misra_c_tmp_header_text == '<') {
-          ;  // correct
-      } else if (CPP_OPTION(pfile, Wmisra_cpp_trigger)) {
-          cpp_warning_with_line(pfile, CPP_W_NONE, *location, 0, "MISRA C:2025 Rule 20.3\n");
-      }
+      if (CPP_OPTION(pfile, Wmisra_cpp_trigger))
+	cpp_warning_with_line (pfile, CPP_W_NONE, *location, 0,
+			       "MISRA C:2025 Rule 20.3");
       if (pfile->directive == &dtable[T_PRAGMA])
 	dir = UC"pragma dependency";
       else
