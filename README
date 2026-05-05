@@ -29,8 +29,11 @@ Key source files changed to implement MISRA C:2025 detection:
     mkdir build && cd build
     ../gcc-7.5.0/configure --prefix=/usr/local/misrac2026 \
         --enable-languages=c --disable-multilib
-    make -j8
+    make -j$(nproc)
     sudo make install
+
+> `$(nproc)` automatically uses all available CPU cores.
+> You can also specify manually, e.g. `make -j8` for an 8-core machine.
 
 ---
 
@@ -65,8 +68,11 @@ Key source files changed to implement MISRA C:2025 detection:
     mkdir build && cd build
     ../gcc-7.5.0/configure --prefix=/usr/local/misrac2026 \
         --enable-languages=c --disable-multilib
-    make -j8
+    make -j$(nproc)
     sudo make install
+
+> `$(nproc)` 會自動使用所有可用的 CPU 核心數。
+> 也可以手動指定，例如八核心機器用 `make -j8`。
 
 ---
 
