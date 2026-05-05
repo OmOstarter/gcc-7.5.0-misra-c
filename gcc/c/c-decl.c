@@ -5979,6 +5979,8 @@ warn_variable_length_array (tree name, tree size)
 	pedwarn_c90 (input_location, OPT_Wvla, "ISO C90 forbids variable "
 		     "length array");
     }
+  if (Wmisra_c_trigger)
+    warning_at (input_location, OPT_Wmisra_c, "MISRA C:2025 Rule 18.8");
 }
 
 /* Print warning about defaulting to int if necessary.  */
