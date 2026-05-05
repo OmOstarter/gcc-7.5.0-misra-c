@@ -141,6 +141,32 @@ misra_2122_ignore_last_arg (const char *name)
 {
   return (strncmp (name, "frexp", 5) == 0) || (strncmp (name, "remquo", 6) == 0);
 }
+
+/* All tgmath function base names (also covers the no-complex subset). */
+static bool
+misra_is_tgmath_name (const char *name)
+{
+  /* Functions that also accept complex arguments */
+  static const char *const complex_ok[] = {
+    "sqrt","pow","exp","log","sin","cos","tan",
+    "asin","acos","atan","sinh","cosh","tanh",
+    "asinh","acosh","atanh","fabs","carg","cimag","creal","conj","cproj",
+    "modf","ldexp","frexp"
+  };
+  for (unsigned i = 0; i < sizeof(complex_ok)/sizeof(complex_ok[0]); ++i) {
+    const char *b = complex_ok[i];
+    size_t blen = strlen (b);
+    if (strncmp (name, b, blen) == 0) {
+      const char *tail = name + blen;
+      if (*tail == '\0'
+          || (tail[0] == 'f' && tail[1] == '\0')
+          || (tail[0] == 'l' && tail[1] == '\0'))
+        return true;
+    }
+  }
+  /* No-complex functions are a subset of all tgmath functions */
+  return misra_2122_name_disallows_complex (name);
+}
 /* ======================================================================= */
 
 
@@ -3850,6 +3876,42 @@ build_function_call_vec (location_t loc, vec<location_t> arg_loc,
                 i + 1, fname);
             }
             break; /* 報一次即可，避免噪音 */
+          }
+        }
+      }
+
+      /* Check for essentially character type or pointer type arguments to
+         any tgmath function — these are never valid operand types.  */
+      if (Wmisra_c_trigger && fname && misra_is_tgmath_name (fname) && params) {
+        int argc = params->length ();
+        int upto = argc;
+        if (argc > 0 && misra_2122_ignore_last_arg (fname))
+          upto = argc - 1;
+        for (int i = 0; i < upto; ++i) {
+          tree arg = (*params)[i];
+          tree t = arg ? TREE_TYPE (arg) : NULL_TREE;
+          if (!t) continue;
+          bool invalid = false;
+          /* Pointer type (including void *) */
+          if (POINTER_TYPE_P (t))
+            invalid = true;
+          /* Essentially character type: plain char (not signed/unsigned char) */
+          else if (TYPE_MAIN_VARIANT (t) == char_type_node)
+            invalid = true;
+          if (invalid) {
+            location_t spot = loc;
+            if (!arg_loc.is_empty ()
+                && i < (int) arg_loc.length ()
+                && arg_loc[i] != UNKNOWN_LOCATION)
+              spot = arg_loc[i];
+            else {
+              location_t eloc = EXPR_LOCATION (arg);
+              if (eloc != UNKNOWN_LOCATION)
+                spot = eloc;
+            }
+            if (!misra_suppress_for_internal (spot))
+              warning_at (spot, OPT_Wmisra_c, "MISRA C:2025 Rule 21.22");
+            break;
           }
         }
       }
