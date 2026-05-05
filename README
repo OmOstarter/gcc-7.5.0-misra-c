@@ -1,3 +1,75 @@
+# GCC 7.5.0 — MISRA C:2025 Checker Fork
+
+This is a modified version of GCC 7.5.0 with added static analysis support for
+MISRA C:2025 rules (Appendix B, Single Translation Unit).
+
+## Added Feature: -Wmisra-c
+
+Enable MISRA C:2025 rule checking by passing `-Wmisra-c` to the compiler:
+
+    gcc -Wmisra-c -std=c11 your_file.c
+
+Violations are reported in the format:
+
+    your_file.c:10:5: warning: MISRA C:2025 Rule X.Y [-Wmisra-c]
+
+## Modified Files
+
+Key source files changed to implement MISRA C:2025 detection:
+
+- `gcc/c/c-parser.c`     — expression parsing, operator precedence rules
+- `gcc/c/c-typeck.c`     — type checking, pointer compatibility
+- `gcc/c/c-decl.c`       — declarations, struct/VLA checks
+- `gcc/c-family/c-lex.c` — lexer, header inclusion checks
+- `gcc/tree-cfg.c`        — control flow, missing return checks
+- `libcpp/directives.c`   — preprocessor directive checks
+
+## Build
+
+    mkdir build && cd build
+    ../gcc-7.5.0/configure --prefix=/usr/local/misrac2026 \
+        --enable-languages=c --disable-multilib
+    make -j8
+    sudo make install
+
+---
+
+# GCC 7.5.0 — MISRA C:2025 檢查器分支
+
+本專案是 GCC 7.5.0 的修改版，新增了對 MISRA C:2025 規則的靜態分析支援，
+涵蓋附錄 B（Single Translation Unit）中的規則。
+
+## 新增功能：-Wmisra-c
+
+編譯時加上 `-Wmisra-c` 即可啟用 MISRA C:2025 規則檢查：
+
+    gcc -Wmisra-c -std=c11 your_file.c
+
+違規回報格式如下：
+
+    your_file.c:10:5: warning: MISRA C:2025 Rule X.Y [-Wmisra-c]
+
+## 修改的檔案
+
+實作 MISRA C:2025 偵測所修改的主要原始檔：
+
+- `gcc/c/c-parser.c`     — 運算式解析、運算子優先順序規則
+- `gcc/c/c-typeck.c`     — 型別檢查、指標相容性
+- `gcc/c/c-decl.c`       — 宣告、struct／VLA 檢查
+- `gcc/c-family/c-lex.c` — 詞法分析器、標頭檔引入檢查
+- `gcc/tree-cfg.c`        — 控制流程、缺少 return 檢查
+- `libcpp/directives.c`   — 前處理器指令檢查
+
+## 建構方式
+
+    mkdir build && cd build
+    ../gcc-7.5.0/configure --prefix=/usr/local/misrac2026 \
+        --enable-languages=c --disable-multilib
+    make -j8
+    sudo make install
+
+---
+
 This directory contains the GNU Compiler Collection (GCC).
 
 The GNU Compiler Collection is free software.  See the files whose
