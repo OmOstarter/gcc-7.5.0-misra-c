@@ -8551,6 +8551,9 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
 			"members");
 	      TREE_TYPE (x) = error_mark_node;
 	    }
+	  else if (Wmisra_c_trigger)
+	    warning_at (DECL_SOURCE_LOCATION (x), OPT_Wmisra_c,
+		        "MISRA C:2025 Rule 18.7");
 	}
 
       if (pedantic && TREE_CODE (t) == RECORD_TYPE
