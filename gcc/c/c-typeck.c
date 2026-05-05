@@ -4425,9 +4425,10 @@ convert_arguments (location_t loc, vec<location_t> arg_loc, tree typelist,
             strcmp((char *)rname->decl_minimal.name->identifier.id.str, "memmove") == 0 ||
             strcmp((char *)rname->decl_minimal.name->identifier.id.str, "memcmp") == 0) {
                 //misra_21_15_tmp_precision[parmnum] = valtype->typed.type->type_common.precision;
-                if (valtype->base.code == POINTER_TYPE) { 
+                if (valtype->base.code == POINTER_TYPE) {
             		misra_21_15_tmp[misra_21_15_counter++] = (long long int)function;
-			misra_21_15_tmp[misra_21_15_counter++] = valtype->typed.type->type_common.precision;
+			misra_21_15_tmp[misra_21_15_counter++] =
+			  (long long int)TYPE_MAIN_VARIANT (TREE_TYPE (valtype));
 		}   
         }
 	
