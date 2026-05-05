@@ -10278,7 +10278,7 @@ c_parser_expression (c_parser *parser)                              //C_PARS_EXP
 //fprintf(stderr,"7\n");
   if (c_parser_next_token_is (parser, CPP_COMMA)) {
     expr = convert_lvalue_to_rvalue (tloc, expr, true, false);
-    if (misra_for_comma_check && Wmisra_c_trigger)
+    if (Wmisra_c_trigger)
 	warning_at(parser->tokens->location, OPT_Wmisra_c, "MISRA C:2025 Rule 12.3");
   }
   while (c_parser_next_token_is (parser, CPP_COMMA))

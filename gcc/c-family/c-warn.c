@@ -1056,9 +1056,6 @@ warnings_for_convert_and_check (location_t loc, tree type, tree expr,
 	  /* This detects cases like converting -129 or 256 to
 	     unsigned char.  */
 	  if (!int_fits_type_p (expr, c_common_signed_type (type))) {
-	    if (Wmisra_c_trigger) { 
-	    	warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 12.2");
-	    }
 	    warning_at (loc, OPT_Woverflow,
 	  		"large integer implicitly truncated to unsigned type");
 	  }

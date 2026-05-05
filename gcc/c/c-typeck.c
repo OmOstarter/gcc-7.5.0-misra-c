@@ -7062,10 +7062,6 @@ build_compound_expr (location_t loc, tree expr1, tree expr2)
 	  else {
 	    warning_at (loc, OPT_Wunused_value,
 			"left-hand operand of comma expression has no effect");
-	    
-	    if (Wmisra_c_trigger) {
-		warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 12.3");
-	    }	
 	   }
 	}
     }
@@ -13688,8 +13684,13 @@ build_binary_op (location_t location, enum tree_code code,
 		{
 		  int_const = false;
 		  if (c_inhibit_evaluation_warnings == 0)
-		    warning_at (location, OPT_Wshift_count_negative,
-				"right shift count is negative");
+		    {
+		      warning_at (location, OPT_Wshift_count_negative,
+				  "right shift count is negative");
+		      if (Wmisra_c_trigger)
+			warning_at (location, OPT_Wmisra_c,
+				    "MISRA C:2025 Rule 12.2");
+		    }
 		}
 	      else if (code0 == VECTOR_TYPE)
 		{
@@ -13712,8 +13713,13 @@ build_binary_op (location_t location, enum tree_code code,
 		    {
 		      int_const = false;
 		      if (c_inhibit_evaluation_warnings == 0)
-			warning_at (location, OPT_Wshift_count_overflow,
-				    "right shift count >= width of type");
+			{
+			  warning_at (location, OPT_Wshift_count_overflow,
+				      "right shift count >= width of type");
+			  if (Wmisra_c_trigger)
+			    warning_at (location, OPT_Wmisra_c,
+					"MISRA C:2025 Rule 12.2");
+			}
 		    }
 		}
 	    }
@@ -13763,8 +13769,13 @@ build_binary_op (location_t location, enum tree_code code,
 		{
 		  int_const = false;
 		  if (c_inhibit_evaluation_warnings == 0)
-		    warning_at (location, OPT_Wshift_count_negative,
-				"left shift count is negative");
+		    {
+		      warning_at (location, OPT_Wshift_count_negative,
+				  "left shift count is negative");
+		      if (Wmisra_c_trigger)
+			warning_at (location, OPT_Wmisra_c,
+				    "MISRA C:2025 Rule 12.2");
+		    }
 		}
 	      else if (code0 == VECTOR_TYPE)
 		{
@@ -13782,8 +13793,13 @@ build_binary_op (location_t location, enum tree_code code,
 		{
 		  int_const = false;
 		  if (c_inhibit_evaluation_warnings == 0)
-		    warning_at (location, OPT_Wshift_count_overflow,
-				"left shift count >= width of type");
+		    {
+		      warning_at (location, OPT_Wshift_count_overflow,
+				  "left shift count >= width of type");
+		      if (Wmisra_c_trigger)
+			warning_at (location, OPT_Wmisra_c,
+				    "MISRA C:2025 Rule 12.2");
+		    }
 		}
 	      else if (TREE_CODE (op0) == INTEGER_CST
 		       && maybe_warn_shift_overflow (location, op0, op1)
