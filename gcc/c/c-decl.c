@@ -1351,37 +1351,14 @@ update_label_decls (struct c_scope *scope)
 			    vec_safe_push(label_vars->decls_in_scope, b1->decl);
 			  }
 			}
-		    } else if (label_vars->label_bindings.bindings_in_scope != NULL){
-			misra_tmp_scope_depth = b->depth;
-			misra_tmp_label_scope = 1;
-			misra_tmp_label_decl_locus = b->decl->block.end_locus;
-			//inform(DECL_SOURCE_LOCATION(b->decl), "test label\n");
 		    }
 		}
-	      if (Wmisra_c_trigger) {
-		if (label_vars->label_bindings.scope != NULL)
-	      	if (b->depth < label_vars->label_bindings.scope->depth) {
-			warning_at(DECL_SOURCE_LOCATION(b->decl), OPT_Wmisra_c, "MISRA C:2025 Rule 15.3", b->depth);
-		        //locate_old_decl(b->decl);	
-		}
-	      }	      
 	      /* Update the bindings of any goto statements associated
 		 with this label.  */
 	      FOR_EACH_VEC_SAFE_ELT (label_vars->gotos, ix, g)
 		update_spot_bindings (scope, &g->goto_bindings);
 	    }
 	}
-        // check jump Label: Misra 15.3 
-	if (Wmisra_c_trigger && misra_tmp_label_scope) {
-		if (scope->depth < misra_tmp_scope_depth) {
-			inform(input_location, "use goto label function location\n");
-			inform(misra_goto_location, "MISRA C:2025 Rule 15.3\n");
-			//inform(misra_tmp_label_decl_locus, "the label is decl on here and the scope depth is %d and %d\n", misra_tmp_scope_depth, scope->depth);
-		}
-		misra_tmp_scope_depth = 0;
-         	misra_tmp_label_scope = 0;
-		misra_tmp_label_decl_locus = 0;
-      	}
 	
       /* Don't search beyond the current function.  */
       if (s == current_function_scope)
@@ -4104,6 +4081,16 @@ check_earlier_gotos (tree label, struct c_label_vars* label_vars)
     {
       struct c_binding *b;
       struct c_scope *scope;
+
+      /* MISRA C:2025 Rule 15.3: the label must be declared in the same
+	 block as the goto or in an enclosing block.  If the goto's scope
+	 is shallower than the label's scope, the goto jumps into a nested
+	 block, which is non-compliant.  */
+      if (Wmisra_c_trigger
+	  && g->goto_bindings.scope != NULL
+	  && label_vars->label_bindings.scope != NULL
+	  && g->goto_bindings.scope->depth < label_vars->label_bindings.scope->depth)
+	warning_at (g->loc, OPT_Wmisra_c, "MISRA C:2025 Rule 15.3");
 
       /* We have a goto to this label.  The goto is going forward.  In
 	 g->scope, the goto is going to skip any binding which was
