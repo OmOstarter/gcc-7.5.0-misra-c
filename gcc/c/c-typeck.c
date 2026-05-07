@@ -643,19 +643,12 @@ misra_11_9_is_int_npc_not_null (tree expr)
       || !INTEGRAL_TYPE_P (TREE_TYPE (expr)))
     return false;
 
-  location_t loc = EXPR_LOCATION (expr);
-  if (loc == UNKNOWN_LOCATION)
-    return false; /* Internally generated zero, not user-written code.  */
-
-  if (!linemap_location_from_macro_expansion_p (line_table, loc))
-    return true;
-
-  const struct line_map *map = linemap_lookup (line_table, loc);
-  if (!map || !linemap_macro_expansion_map_p (map))
-    return true;
-
-  const char *name = linemap_map_get_macro_name (linemap_check_macro (map));
-  return (name == NULL || strcmp (name, "NULL") != 0);
+  /* INTEGER_CST nodes do not carry EXPR_LOCATION (tcc_constant class),
+     so the macro-expansion path below is unreachable for bare literals.
+     NULL expands to (void*)0 whose type is void*, not integral, so it is
+     already excluded by INTEGRAL_TYPE_P above.  Any integer zero that
+     reaches here is a non-compliant null pointer constant.  */
+  return true;
 }
 
 /* EXPR may appear in an unevaluated part of an integer constant
