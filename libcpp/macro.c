@@ -929,11 +929,12 @@ collect_args (cpp_reader *pfile, const cpp_hashnode *node,
 		if (*misra_macro_temp == 'i' && *(misra_macro_temp + 1) == 'f' ||
 		    *misra_macro_temp == 'e' && *(misra_macro_temp + 1) == 'l' ||
 		    *misra_macro_temp == 'e' && *(misra_macro_temp + 1) == 'n' ||
+		    *misra_macro_temp == 'i' && *(misra_macro_temp + 1) == 'n' ||
+		    *misra_macro_temp == 'u' && *(misra_macro_temp + 1) == 'n' ||
+		    *misra_macro_temp == 'p' && *(misra_macro_temp + 1) == 'r' ||
 		    *misra_macro_temp == 'd' && *(misra_macro_temp + 1) == 'e' && *(misra_macro_temp + 2) == 'f') {
-			//inform(token->src_loc, "Misra-C 20.6\n");
-			cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.6\n");
-			//SYNTAX_WARNING_AT(node->value.macro->line, "The macro is define in here\n");
-		}  
+			cpp_warning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.6");
+		}
 	}
   }
   /* Collect the tokens making up each argument.  We don't yet know
