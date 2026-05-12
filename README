@@ -24,6 +24,13 @@ Key source files changed to implement MISRA C:2025 detection:
 - `gcc/tree-cfg.c`        — control flow, missing return checks
 - `libcpp/directives.c`   — preprocessor directive checks
 
+## Prerequisites
+
+Before building GCC, install the required development libraries:
+
+    sudo apt update
+    sudo apt install libgmp-dev libmpfr-dev libmpc-dev
+
 ## Build
 
     mkdir build && cd build
@@ -62,6 +69,13 @@ Key source files changed to implement MISRA C:2025 detection:
 - `gcc/c-family/c-lex.c` — 詞法分析器、標頭檔引入檢查
 - `gcc/tree-cfg.c`        — 控制流程、缺少 return 檢查
 - `libcpp/directives.c`   — 前處理器指令檢查
+
+## 先備條件
+
+在編譯 GCC 之前，需要先安裝 GMP、MPFR 與 MPC 的開發套件：
+
+    sudo apt update
+    sudo apt install libgmp-dev libmpfr-dev libmpc-dev
 
 ## 建構方式
 
