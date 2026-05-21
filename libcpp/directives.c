@@ -2285,7 +2285,8 @@ do_else (cpp_reader *pfile)
   cpp_buffer *buffer = pfile->buffer;
   struct if_stack *ifs = buffer->if_stack;
   if (ifs == NULL) {
-    cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
+    if (CPP_OPTION (pfile, Wmisra_cpp_trigger))
+      cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
   }
   if (ifs == NULL)
     cpp_error (pfile, CPP_DL_ERROR, "#else without #if");
@@ -2320,7 +2321,8 @@ do_elif (cpp_reader *pfile)
   cpp_buffer *buffer = pfile->buffer;
   struct if_stack *ifs = buffer->if_stack;
   if (ifs == NULL) {
-    cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
+    if (CPP_OPTION (pfile, Wmisra_cpp_trigger))
+      cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
   }
   if (ifs == NULL)
     cpp_error (pfile, CPP_DL_ERROR, "#elif without #if");
@@ -2358,7 +2360,8 @@ do_endif (cpp_reader *pfile)
   cpp_buffer *buffer = pfile->buffer;
   struct if_stack *ifs = buffer->if_stack;
   if (ifs == NULL) {
-    cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
+    if (CPP_OPTION (pfile, Wmisra_cpp_trigger))
+      cpp_pedwarning (pfile, CPP_W_NONE, "MISRA C:2025 Rule 20.14\n");
   }
   if (ifs == NULL)
     cpp_error (pfile, CPP_DL_ERROR, "#endif without #if MISRA C:2025 Rule 20.14\n");

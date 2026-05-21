@@ -1861,8 +1861,8 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
   unsigned long long value;
   unsigned long long maxv;
 
-  /* 你如果有 MISRA 開關，這裡可以加：
-     if (!CPP_OPTION (pfile, misra_enabled)) return; */
+  if (!CPP_OPTION (pfile, Wmisra_cpp_trigger))
+    return;
 
   /* 只在 C 模式檢查（避免影響 C++ 等） */
   if (CPP_OPTION (pfile, cplusplus))
@@ -1907,7 +1907,7 @@ misra_check_integer_constant_macro_arg (cpp_reader *pfile,
           source_location loc = arg->first[0]->src_loc;
           cpp_warning_with_line (pfile, CPP_W_NONE, loc, 0,
                     "MISRA C:2025 Rule 7.5");
-      }
+        }
 
       return;
     }
