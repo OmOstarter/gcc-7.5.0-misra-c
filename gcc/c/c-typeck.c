@@ -7468,7 +7468,7 @@ build_c_cast (location_t loc, tree type, tree expr)
 		warning_flag[7]=1;
       for(i=0;i<9;i++)
 		if(warning_flag[i]==1&&loc)
-			inform(loc,"MISRA C:2025 Rule 11.%d",i+1);
+			warning_at(loc, OPT_Wmisra_c, "MISRA C:2025 Rule 11.%d",i+1);
 	}
       /* Optionally warn about potentially worrisome casts.  */
       if (warn_cast_qual
