@@ -1,4 +1,4 @@
-# GCC 7.5.0 — MISRA C:2025 Checker Fork
+# GCC 7.5.0 — MISRA C:2025 Checker
 
 A modified version of GCC 7.5.0 with built-in static analysis support for **MISRA C:2025** rules (Appendix B, Single Translation Unit).
 
