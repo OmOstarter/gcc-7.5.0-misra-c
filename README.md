@@ -1,4 +1,4 @@
-A GCC-Based Static Checker for MISRA C:2025
+# A GCC-Based Static Checker for MISRA C:2025
 
 - GCC 7.5.0 with built-in static analysis support for MISRA C:2025 single-translation-unit rules
 - An extended version of the existing GCC MISRA C: 2012 checker.
@@ -58,9 +58,12 @@ sudo make install
 
 ---
 
-## GCC 7.5.0 — MISRA C:2025 檢查器
+## 基於 GCC 的 MISRA C:2025 靜態檢查器
 
-本專案是 GCC 7.5.0 的修改版，新增了對 **MISRA C:2025** 規則的靜態分析支援，涵蓋附錄 B（Single Translation Unit）中的規則。
+* 以 GCC 7.5.0 為基礎，內建對 MISRA C:2025 單一翻譯單元（Single Translation Unit, STU）規則的靜態分析支援。
+* 此專案為既有 GCC MISRA C:2012 檢查器的擴充版本。
+
+https://github.com/CCU-HPCLAB/GCC-MISRAC-Checker
 
 ### 使用方式
 
