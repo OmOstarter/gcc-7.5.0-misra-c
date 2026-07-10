@@ -57,7 +57,7 @@ sudo make install
 
 ---
 
-## GCC 7.5.0 — MISRA C:2025 檢查器分支
+## GCC 7.5.0 — MISRA C:2025 檢查器
 
 本專案是 GCC 7.5.0 的修改版，新增了對 **MISRA C:2025** 規則的靜態分析支援，涵蓋附錄 B（Single Translation Unit）中的規則。
 
