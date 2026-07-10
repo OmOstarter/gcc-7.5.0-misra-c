@@ -1,7 +1,8 @@
-# GCC 7.5.0 — MISRA C:2025 Checker
+A GCC-Based Static Checker for MISRA C:2025
 
-A modified version of GCC 7.5.0 with built-in static analysis support for **MISRA C:2025** rules (Appendix B, Single Translation Unit).
-
+- GCC 7.5.0 with built-in static analysis support for MISRA C:2025 single-translation-unit rules
+- An extended version of the existing GCC MISRA C: 2012 checker.
+(https://github.com/CCU-HPCLAB/GCC-MISRAC-Checker)
 ---
 
 ## Usage
