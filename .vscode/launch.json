@@ -1,0 +1,58 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "GCC: Debug installed cc1 (fast)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/usr/local/misrac2026/libexec/gcc/x86_64-pc-linux-gnu/7.5.0/cc1",
+      "args": [
+        "-quiet",
+        "-imultiarch",
+        "x86_64-linux-gnu",
+        "${input:misraTestFile}",
+        "-quiet",
+        "-dumpbase",
+        "vscode-misra-test.c",
+        "-mtune=generic",
+        "-march=x86-64",
+        "-auxbase-strip",
+        "/tmp/misrac-vscode-output.o",
+        "-Wmisra-c",
+        "-std=c11",
+        "-o",
+        "/tmp/misrac-vscode-output.s"
+      ],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "miDebuggerPath": "${workspaceFolder}/.vscode/gdb-no-tty.sh",
+      "setupCommands": [
+        {
+          "description": "Disable automatic debuginfo downloads",
+          "text": "-gdb-set debuginfod enabled off",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Enable GDB pretty-printing",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Avoid VS Code/GDB controlling-terminal conflict",
+          "text": "-inferior-tty-set /dev/null",
+          "ignoreFailures": false
+        }
+      ]
+    }
+  ],
+  "inputs": [
+    {
+      "id": "misraTestFile",
+      "type": "promptString",
+      "description": "C test file (absolute path or relative to gcc-7.5.0-misra-c)",
+      "default": "../test/MISRAC-7-5-1-NC.c"
+    }
+  ]
+}

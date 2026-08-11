@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "GCC: build cc1",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "-j16",
+        "cc1"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/../build-misrac-gcc/gcc"
+      },
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ]
+}
