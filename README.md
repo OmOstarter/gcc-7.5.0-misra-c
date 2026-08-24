@@ -59,6 +59,40 @@ sudo make install
 
 ---
 
+## Contribution Differences from the Original Checker
+
+The original
+[CCU-HPCLAB GCC-MISRAC-Checker](https://github.com/CCU-HPCLAB/GCC-MISRAC-Checker)
+targeted MISRA C:2012 Amendment 1 single-translation-unit rules and introduced
+the `-Wmisra-c` integration in GCC 7.5.0. Its implementation was imported into
+this repository as base commit `63e83f82c`. The imported source matches the CCU
+checker state introduced by commit `cdfc0c7`; the exact CCU checkout commit was
+not preserved by the import.
+
+Relative to that inherited base, this fork contributes:
+
+- diagnostics for **34 post-2012 rule identifiers**, consisting of **31 STU
+  identifiers** and **partial compiler-side diagnostics for 3 System-rule
+  identifiers**;
+- completed implementations for **8 MISRA C:2012 rule identifiers** that were
+  missing from the inherited checker; and
+- corrections to **29 existing MISRA C:2012 rule implementations** that had
+  incomplete or incorrect detection logic.
+
+These counts describe implementation history, not exhaustive semantic
+coverage. The three System-rule diagnostics are partial diagnostics and must
+not be interpreted as complete System-rule checker support. Rule-number
+migrations are not counted as newly implemented rules.
+
+The original checker is described in:
+
+> Chih-Yuan Chen, Yung-An Fang, Guan-Ren Wang, and Peng-Sheng Chen,
+> “A GCC-based checker for compliance with MISRA-C's
+> single-translation-unit rules,” *Connection Science*, 35(1), 2023.
+> [https://doi.org/10.1080/09540091.2023.2222934](https://doi.org/10.1080/09540091.2023.2222934)
+
+---
+
 ## 基於 GCC 的 MISRA C:2025 靜態檢查器
 
 * 以 GCC 7.5.0 為基礎，內建對 MISRA C:2025 單一翻譯單元（Single Translation Unit, STU）規則的靜態分析支援。
@@ -96,3 +130,25 @@ sudo make install
 ```
 
 > `$(nproc)` 會自動使用所有可用的 CPU 核心數。
+
+## 與原始檢查器的貢獻差異
+
+原始
+[CCU-HPCLAB GCC-MISRAC-Checker](https://github.com/CCU-HPCLAB/GCC-MISRAC-Checker)
+以 MISRA C:2012 Amendment 1 的單一翻譯單元規則為目標，並在 GCC 7.5.0
+中加入 `-Wmisra-c`。其實作在本 repository 中以 base commit `63e83f82c`
+匯入；檔案比對顯示匯入內容符合 CCU commit `cdfc0c7` 建立的 checker 狀態，
+但匯入時未保留實際 checkout 的精確 CCU commit。
+
+相較該繼承版本，本次 fork 的貢獻為：
+
+- 新增 **34 個 2012 後續版本的 rule diagnostics**，其中包含 **31 個 STU
+  rule identifiers** 與 **3 個 System-rule identifiers 的 partial compiler-side
+  diagnostics**；
+- 補上學長版本缺少的 **8 個 MISRA C:2012 rule implementations**；
+- 修正學長版本中 **29 個已有但偵測不完整或不正確的 MISRA C:2012 rule
+  implementations**。
+
+以上數量描述的是實作歷史，不代表每條規則的所有語意情況皆已完整涵蓋。
+3 個 System-rule diagnostics 只能視為部分診斷，不代表完整的 System-rule
+checker support；規則改號亦未重複計入新增規則。
