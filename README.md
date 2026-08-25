@@ -57,6 +57,13 @@ sudo make install
 | `libcpp/directives.c` | Preprocessor directive checks |
 | `libcpp/macro.c` | Macro identifier checks |
 
+## Validation Suite
+
+The companion repository
+[misra-c-2025-single-tu-tests](https://github.com/OmOstarter/misra-c-2025-single-tu-tests)
+contains the MISRA C:2025 single-translation-unit (STU) validation suite used
+to exercise this project's `-Wmisra-c` diagnostics.
+
 ---
 
 ## Contribution Differences from the Original Checker
@@ -130,6 +137,13 @@ sudo make install
 ```
 
 > `$(nproc)` 會自動使用所有可用的 CPU 核心數。
+
+## 驗證測試套件
+
+配套 repository
+[misra-c-2025-single-tu-tests](https://github.com/OmOstarter/misra-c-2025-single-tu-tests)
+收錄本專案用來驗證 `-Wmisra-c` 診斷的 MISRA C:2025 單一翻譯單元（STU）
+validation suite。
 
 ## 與原始檢查器的貢獻差異
 
