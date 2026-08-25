@@ -138,6 +138,18 @@ sudo make install
 
 > `$(nproc)` 會自動使用所有可用的 CPU 核心數。
 
+### 修改的原始碼檔案
+
+| 檔案 | 修改內容 |
+|------|----------|
+| `gcc/c/c-parser.c` | 運算式解析、運算子優先序規則 |
+| `gcc/c/c-typeck.c` | 型別檢查、指標相容性 |
+| `gcc/c/c-decl.c` | 宣告、struct／VLA 檢查 |
+| `gcc/c-family/c-lex.c` | 詞法分析、標頭檔引入檢查 |
+| `gcc/tree-cfg.c` | 控制流程、缺少 return 的檢查 |
+| `libcpp/directives.c` | 前處理器指令檢查 |
+| `libcpp/macro.c` | 巨集識別符檢查 |
+
 ## 驗證測試套件
 
 配套 repository
