@@ -76,7 +76,7 @@ this repository as base commit `63e83f82c`. The imported source matches the CCU
 checker state introduced by commit `cdfc0c7`; the exact CCU checkout commit was
 not preserved by the import.
 
-Relative to that inherited base, this fork contributes:
+Relative to that inherited base, this project contributes:
 
 - diagnostics for **34 post-2012 rule identifiers**, consisting of **31 STU
   identifiers** and **partial compiler-side diagnostics for 3 System-rule
@@ -154,7 +154,7 @@ validation suite。
 匯入；檔案比對顯示匯入內容符合 CCU commit `cdfc0c7` 建立的 checker 狀態，
 但匯入時未保留實際 checkout 的精確 CCU commit。
 
-相較該繼承版本，本次 fork 的貢獻為：
+相較該繼承版本，本次擴充的貢獻為：
 
 - 新增 **34 個 2012 後續版本的 rule diagnostics**，其中包含 **31 個 STU
   rule identifiers** 與 **3 個 System-rule identifiers 的 partial compiler-side
